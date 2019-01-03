@@ -54,6 +54,16 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RenderData\Camera.cs" />
+    <Compile Include="RenderData\Matrix4x4.cs" />
+    <Compile Include="RenderData\Triangle.cs" />
+    <Compile Include="RenderData\UV.cs" />
+    <Compile Include="RenderData\Vector.cs" />
+    <Compile Include="RenderData\Vertex.cs" />
+    <Compile Include="Test\TriangleTestData.cs" />
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

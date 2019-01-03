@@ -1,0 +1,10 @@
+D:\AllProject\graphic_exercise\graphic_exercise\bin\Debug\graphic_exercise.exe.config
+D:\AllProject\graphic_exercise\graphic_exercise\bin\Debug\graphic_exercise.exe
+D:\AllProject\graphic_exercise\graphic_exercise\bin\Debug\graphic_exercise.pdb
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.csprojAssemblyReference.cache
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.Form1.resources
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.Properties.Resources.resources
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.csproj.GenerateResource.cache
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.csproj.CoreCompileInputs.cache
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.exe
+D:\AllProject\graphic_exercise\graphic_exercise\obj\Debug\graphic_exercise.pdb

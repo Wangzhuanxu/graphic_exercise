@@ -1,0 +1,138 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace graphic_exercise.RenderData
+{
+    /// <summary>
+    /// 列向量
+    /// </summary>
+    class Vector
+    {
+        public float x;
+        public float y;
+        public float z;
+        public float w;
+
+        public Vector()
+        {
+
+        }
+
+        /// <summary>
+        /// 初始化点
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        /// <param name="w"></param>
+        public Vector(float x, float y, float z, float w)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        }
+        /// <summary>
+        /// 初始化向量
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="z"></param>
+        public Vector(float x, float y, float z)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = 0;
+        }
+        /// <summary>
+        /// 获取向量长度
+        /// </summary>
+        /// <returns></returns>
+        public float getLength()
+        {
+            float l = x * x + y * y + z * z;
+            return (float)Math.Sqrt(l);
+        }
+        /// <summary>
+        /// 规格化
+        /// </summary>
+        /// <returns>返回向量本身</returns>
+        public Vector normalize()
+        {
+            float l = getLength();
+            if (l != 0)
+            {
+                x *= 1 / l;
+                y *= 1 / l;
+                z *= 1 / l;
+            }
+            return this;
+        }
+        /// <summary>
+        /// 向量相减
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static Vector operator -(Vector v1,Vector v2)
+        {
+            return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+        }
+        /// <summary>
+        /// 向量相加
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static Vector operator +(Vector v1, Vector v2)
+        {
+            return new Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+        }
+
+        /// <summary>
+        /// 点乘
+        /// </summary>
+        /// <param name="lhs"></param>
+        /// <param name="rhs"></param>
+        /// <returns></returns>
+        public static float dot(Vector lhs, Vector rhs)
+        {
+            return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+        }
+        /// <summary>
+        /// 叉乘
+        /// </summary>
+        /// <param name="lhs"></param>
+        /// <param name="rhs"></param>
+        /// <returns></returns>
+        /// 公式： ( x1 , y1 , z1 ) X ( x2 , y2 , z2 ) =( y1z2 - z1y2 , z1x2 - x1z2 , x1y2 - y1x2 )
+        public static Vector cross(Vector lhs, Vector rhs)
+        {
+            float x = lhs.y * rhs.z - lhs.z * rhs.y;
+            float y = lhs.z * rhs.x - lhs.x * rhs.z;
+            float z = lhs.x * rhs.y - lhs.y * rhs.x;
+            return new Vector(x, y, z);
+        }
+
+        /// <summary>
+        /// 矩阵乘以向量，格式为矩阵*向量
+        /// </summary>
+        /// <param name="lhs"></param>
+        /// <param name="rhs"></param>
+        /// <returns></returns>
+        public static Vector operator *(Vector vv, Matrix4x4 m)
+        {
+            Vector v = new Vector();
+            v.x = vv.x * m[0, 0] + vv.y * m[0, 1] + vv.z * m[0, 2] + vv.w * m[0, 3];
+            v.y = vv.x * m[1, 0] + vv.y * m[1, 1] + vv.z * m[1, 2] + vv.w * m[1, 3];
+            v.z = vv.x * m[2, 0] + vv.y * m[2, 1] + vv.z * m[2, 2] + vv.w * m[2, 3];
+            v.w = vv.x * m[3, 0] + vv.y * m[3, 1] + vv.z * m[3, 2] + vv.w * m[3, 3];
+            return v;
+        }
+
+    }
+}
