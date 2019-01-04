@@ -60,6 +60,7 @@
     <Compile Include="RenderData\UV.cs" />
     <Compile Include="RenderData\Vector.cs" />
     <Compile Include="RenderData\Vertex.cs" />
+    <Compile Include="Test\CubeTestDatacs.cs" />
     <Compile Include="Test\TriangleTestData.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>

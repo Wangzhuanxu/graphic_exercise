@@ -118,21 +118,11 @@ namespace graphic_exercise.RenderData
             return new Vector(x, y, z);
         }
 
-        /// <summary>
-        /// 矩阵乘以向量，格式为矩阵*向量
-        /// </summary>
-        /// <param name="lhs"></param>
-        /// <param name="rhs"></param>
-        /// <returns></returns>
-        public static Vector operator *(Vector vv, Matrix4x4 m)
+        public  Vector clone()
         {
-            Vector v = new Vector();
-            v.x = vv.x * m[0, 0] + vv.y * m[0, 1] + vv.z * m[0, 2] + vv.w * m[0, 3];
-            v.y = vv.x * m[1, 0] + vv.y * m[1, 1] + vv.z * m[1, 2] + vv.w * m[1, 3];
-            v.z = vv.x * m[2, 0] + vv.y * m[2, 1] + vv.z * m[2, 2] + vv.w * m[2, 3];
-            v.w = vv.x * m[3, 0] + vv.y * m[3, 1] + vv.z * m[3, 2] + vv.w * m[3, 3];
-            return v;
+            return new Vector(x, y, z, w);
         }
 
+     
     }
 }

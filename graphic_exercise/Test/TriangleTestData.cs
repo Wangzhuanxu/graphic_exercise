@@ -11,14 +11,14 @@ namespace graphic_exercise.Test
     {
         //顶点坐标
         public static Vector[] pointList = {
-                                            new Vector(-1,  1, 0),
-                                            new Vector(-1, -1, 0),
-                                            new Vector(1, -1, 0),
-                                            new Vector(1, 1, 0),
+                                            new Vector(-1,  1, 0,1),
+                                            new Vector(-1, -1, 0,1),
+                                            new Vector(1, -1, 0,1),
+                                            new Vector(1, 1, 0,1),
                                         };
         //三角形顶点索引 12个面
-        public static int[] indexs = {   0,1,2,
-                                   0,2,3,
+        public static Index[] indexs = {   new Index(0,3,2),
+                                   new Index(0,2,1)
                                };
 
         //uv坐标
@@ -26,5 +26,11 @@ namespace graphic_exercise.Test
                                    new UV(0, 0),new UV( 0, 1),new UV(1, 1),
                                    new UV(0, 0),new UV(1, 1),new UV(1, 0),
                               };
+
+        //法线
+        public static Vector[] norlmas = {
+                                                new Vector( 0, 0, -1), new Vector( 0, 0, -1), new Vector( 0, 0, -1),
+                                               new Vector( 0, 0, -1), new Vector( 0, 0, -1), new Vector( 0, 0, -1),
+                                            };
     }
 }

@@ -24,5 +24,10 @@ namespace graphic_exercise.RenderData
             uv[0] = uvx;
             uv[1] = uvy;
         }
+
+        public Vertex clone()
+        {
+            return new Vertex(pos, normal, uv[0], uv[1]);
+        }
     }
 }

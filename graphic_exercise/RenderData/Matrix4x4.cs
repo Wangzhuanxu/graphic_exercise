@@ -221,6 +221,23 @@ namespace graphic_exercise.RenderData
             return adj;
         }
 
+        /// <summary>
+        /// 矩阵乘以向量，格式为矩阵*向量
+        /// </summary>
+        /// <param name="lhs"></param>
+        /// <param name="rhs"></param>
+        /// <returns></returns>
+        public static Vector operator *(Matrix4x4 m,Vector vv)
+        {
+            Vector v = new Vector();
+            v.x = vv.x * m[0, 0] + vv.y * m[0, 1] + vv.z * m[0, 2] + vv.w * m[0, 3];
+            v.y = vv.x * m[1, 0] + vv.y * m[1, 1] + vv.z * m[1, 2] + vv.w * m[1, 3];
+            v.z = vv.x * m[2, 0] + vv.y * m[2, 1] + vv.z * m[2, 2] + vv.w * m[2, 3];
+            v.w = vv.x * m[3, 0] + vv.y * m[3, 1] + vv.z * m[3, 2] + vv.w * m[3, 3];
+            return v;
+        }
+
+
         //////////////////////////////////////////////////////////////////////////////矩阵变换/////////////////////////////////////////////////
         /// <summary>
         /// 平移
@@ -313,7 +330,7 @@ namespace graphic_exercise.RenderData
         /// <param name="y"></param>
         /// <param name="z"></param>
         /// <returns></returns>
-        public Matrix4x4 scale(float x,float y,float z)
+        public static Matrix4x4 scale(float x,float y,float z)
         {
             Matrix4x4 m = new Matrix4x4
                (
@@ -327,14 +344,18 @@ namespace graphic_exercise.RenderData
         /// <summary>
         /// 推到网址：https://blog.csdn.net/Augusdi/article/details/20450065
         /// 最终目的将顶点转换到摄像机空间中
+        /// Unity中此坐标系为右手坐标系
+        /// 需要先求一个左手坐标系的旋转矩阵，然后将其转化为右手坐标系，
+        /// 需要左乘一个伪单位矩阵，该矩阵作用是翻转原矩阵的z坐标
         /// </summary>
         /// <param name="look"></param>
         /// <param name="up"></param>
         /// <param name="pos"></param>
         /// <returns></returns>
-        public Matrix4x4 view(Vector look,Vector up,Vector pos)
+        public static Matrix4x4 view(Vector look,Vector up,Vector pos)
         {
-            Vector N = look-pos;
+            Vector N =look-pos;
+            N.normalize();
             Vector U = Vector.cross( up,N);
             U.normalize();
             up = Vector.cross( N,U);
@@ -355,7 +376,11 @@ namespace graphic_exercise.RenderData
                      0,    0,    0,    1
 
                 );
-            return r * t;
+            Matrix4x4 m = new Matrix4x4();
+            m.Identity();
+            m[2, 2] = -1;
+            return m*r * t;
+            //return r;
         }
         /// <summary>
         /// 投影矩阵
@@ -365,12 +390,12 @@ namespace graphic_exercise.RenderData
         /// <param name="near">近平面</param>
         /// <param name="far">远平面</param>
         /// <returns></returns>
-        public Matrix4x4 project(float fov,float aspect,float near,float far)
+        public static Matrix4x4 project(float fov,float aspect,float near,float far)
         {
             Matrix4x4 p = new Matrix4x4();
             p[0, 0] = (float)(1 / (Math.Tan(fov * 0.5f) * aspect));
             p[1, 1] = (float)(1 / Math.Tan(fov * 0.5f));
-            p[2, 2] = far+near / (far - near);
+            p[2, 2] =( far+near )/ ( near-far);
             p[2, 3] = (2*far * near) / (near - far);
             p[3, 2] = -1f;
             return p;
