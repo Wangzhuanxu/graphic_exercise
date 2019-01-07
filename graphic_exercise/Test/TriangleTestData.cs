@@ -11,10 +11,10 @@ namespace graphic_exercise.Test
     {
         //顶点坐标
         public static Vector[] pointList = {
-                                            new Vector(-1,  1, 0,1),
+                                            new Vector(-2,  1, 0,1),
                                             new Vector(-1, -1, 0,1),
                                             new Vector(1, -1, 0,1),
-                                            new Vector(1, 1, 0,1),
+                                            new Vector(1, 2, 0,1),
                                         };
         //三角形顶点索引 12个面
         public static Index[] indexs = {   new Index(0,3,2),
@@ -36,7 +36,9 @@ namespace graphic_exercise.Test
         //顶点色
         public static Color[] vertColors = {
                                               new Color( 0, 1, 0,1), new Color( 0, 0, 1,1), new Color( 1, 0, 0,1),
-                                               new Color( 0, 1, 0,1), new Color( 1, 0, 0,1), new Color( 0, 0, 1,1),
+                                               new Color( 1, 0, 0,1), new Color(0, 1,0,1), new Color( 0,0, 1,1),
                                          };
+        //材质
+        public static Material mat = new Material(new Color(0, 0, 0.1f,1), new Color(0.3f, 0.3f, 0.3f,1), new Color(1, 1, 1,1), 99);
     }
 }

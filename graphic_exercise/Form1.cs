@@ -24,6 +24,7 @@ namespace graphic_exercise
         private Graphics frameG;
         private Triangle triangles;//三角形类，也就是mesh类
         private Camera camera;//摄像机类
+        private float[,] zbuffer;//深度缓冲
         int width=800;
         int height=600;
         public Form1()
@@ -42,12 +43,11 @@ namespace graphic_exercise
             frameBuff = new Bitmap(this.Width, this.Height);
             frameG = Graphics.FromImage(frameBuff);
             //初始化顶点
-            triangles = new Triangle(TriangleTestData.pointList, TriangleTestData.indexs, TriangleTestData.uvs, TriangleTestData.norlmas,TriangleTestData.vertColors);
+            triangles = new Triangle(CubeTestDatacs.pointList, CubeTestDatacs.indexs, CubeTestDatacs.uvs, CubeTestDatacs.norlmas, CubeTestDatacs.vertColors);
             //初始化摄像机 Vector look,Vector up,Vector pos,float fov,float aspect,float near,float far
-            camera = new Camera(new Vector(0, 0, 30, 1), new Vector(0, 1, 0, 0), new Vector(0, 0, -1, 1), (float)System.Math.PI / 3, this.Width / (float)this.Height, 5f, 40f);
-            t = new Thread(new ThreadStart(Tick));
-            t.Start();
-            this.Closed += close;
+            camera = new Camera(new Vector(0, 0, 10, 1), new Vector(0, 1, 0, 0), new Vector(-2, 5, -1, 1), (float)System.Math.PI / 3, this.Width / (float)this.Height, 5f, 40f);
+
+            zbuffer = new float[width, height];
 
             // 测试数据
             //Vector v = new Vector(1, 0, 0);
@@ -57,10 +57,9 @@ namespace graphic_exercise
             //v = m * v;
             //l = new Label();
             //l.SetBounds(100, 100, 300, 300);
-            //l.Text = "sdfdf";
             //this.Controls.Add(l);
             //print(l, m, vv, p);
-
+            
 
         }
         /// <summary>
@@ -81,9 +80,10 @@ namespace graphic_exercise
                 }
                 sb.Append("\n");
             }
-            Vector v = new Vector(0, 2,4, 1);
-            v =p*mv* m * v;
-            sb.Append(v.x + "  " + v.y + " " + v.z + " " + v.w );
+            Vector v = new Vector(-1, 1, 8, 1);
+            ;
+            v =mv* m * v;
+            sb.Append(v.x + "  " + v.y + " " + v.z + " " + v.w+" "+v.z/v.w+"  "+1/v.w );
             l.Text = sb.ToString();
         }
 
@@ -91,6 +91,17 @@ namespace graphic_exercise
         public void clearBuff()
         {
             frameG.Clear(new  graphic_exercise.RenderData.Color(0,1,0,0).TransFormToSystemColor());//清除颜色缓存
+            clearDeath();
+        }
+        public void clearDeath()
+        {
+            for(int i=0;i<zbuffer.GetLength(0);i++)
+            {
+                for(int j=0;j<zbuffer.GetLength(1);j++)
+                {
+                    zbuffer[i, j] = 1;
+                }
+            }
         }
         /// <summary>
         /// 绘制主方法
@@ -100,11 +111,15 @@ namespace graphic_exercise
         /// <param name="p"></param>
         private void draw(Matrix4x4 m,Matrix4x4 v,Matrix4x4 p)
         {
-            for(int i=0;i<triangles.indexsList.Count;i++)//遍历顶点索引数组
+            for (int i = 0; i < triangles.vertexList.Count; i += 3)//遍历顶点索引数组
             {
-                drawTriangle(triangles.vertexList[triangles.indexsList[i].one].clone(), 
-                    triangles.vertexList[triangles.indexsList[i].two].clone(), 
-                    triangles.vertexList[triangles.indexsList[i].three].clone()
+                //drawTriangle(triangles.vertexList[triangles.indexsList[i].one].clone(), 
+                //    triangles.vertexList[triangles.indexsList[i].two].clone(), 
+                //    triangles.vertexList[triangles.indexsList[i].three].clone()
+                //    , m, v, p);
+                drawTriangle(triangles.vertexList[i].clone(),
+                    triangles.vertexList[i + 1].clone(),
+                    triangles.vertexList[i + 2].clone()
                     , m, v, p);
                 //this.Text = triangles.vertexList[triangles.indexsList[i].one].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].one].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].one].pos.z + " "
                 //           + triangles.vertexList[triangles.indexsList[i].two].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].two].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].two].pos.z + " " +
@@ -135,9 +150,10 @@ namespace graphic_exercise
             projectToScreen(v2);
             projectToScreen(v3);
 
-            //this.Text = v1.pos.x + "   " + v1.pos.y + "    "  + " "
+            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
             //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
-            //           v3.pos.x + "   " + v3.pos.y + "    " ;
+            //           v3.pos.x + "   " + v3.pos.y + "    "
+            //           +v1.color.r+"  "+v1.color.g+" "+v1.color.b;
 
             //画线框
             //BresenhamDrawLine(v1, v2);
@@ -190,6 +206,8 @@ namespace graphic_exercise
                 v.pos.y *= 1 / v.pos.w;
                 v.pos.z *= 1 / v.pos.w;
                 v.pos.w = 1;
+                //保存顶点的深度值
+                v.depth = (v.pos.z+1)/2;
                 //NDC到屏幕坐标
                 v.pos.x = (v.pos.x + 1) * 0.5f * width;
                 v.pos.y = (1 -v.pos.y) * 0.5f * height;
@@ -322,7 +340,79 @@ namespace graphic_exercise
             }
             else
             {
-                //需要分割三角形
+                //分割三角形,先求出三角形的三个顶点y值大小
+                Vertex top=new Vertex();
+                Vertex bottom = new Vertex();
+                Vertex middle = new Vertex();
+                //                                              y由大到小，y小的在上
+                if (v1.pos.y > v2.pos.y && v2.pos.y > v3.pos.y)//v1 v2 v3
+                {
+                    top = v3;
+                    middle = v2;
+                    bottom = v1;
+                }
+                else if (v3.pos.y >v2.pos.y && v2.pos.y > v1.pos.y)//3 2 1
+                {
+                    top = v1;
+                    middle = v2;
+                    bottom = v3;
+                }
+                else if (v2.pos.y > v1.pos.y && v1.pos.y > v3.pos.y)//2 1 3
+                {
+                    top = v3;
+                    middle = v1;
+                    bottom = v2;
+                }
+                else if (v3.pos.y > v1.pos.y && v1.pos.y > v2.pos.y)// 3 1 2
+                {
+                    top = v2;
+                    middle = v1;
+                    bottom = v3;
+                }
+                else if (v1.pos.y > v3.pos.y && v3.pos.y > v2.pos.y)// 1 3 2 
+                {
+                    top = v2;
+                    middle = v3;
+                    bottom = v1;
+                }
+                else if (v2.pos.y > v3.pos.y && v3.pos.y > v1.pos.y)//2 3 1
+                {
+                    top = v1;
+                    middle = v3;
+                    bottom = v2;
+                }
+                //else
+                //{
+                //    //三点共线
+                //    return;
+                //}
+
+
+                //插值求中间点x
+                float middlex = (middle.pos.y - top.pos.y) * (bottom.pos.x - top.pos.x) / (bottom.pos.y - top.pos.y) + top.pos.x;
+                //求插值因子
+                float t = (middle.pos.y - top.pos.y) / (bottom.pos.y - top.pos.y);
+                //插值生成左右顶点
+                Vertex new1 = new Vertex();
+                new1.pos.x = middlex;
+                new1.pos.y = middle.pos.y;
+                //插值
+                Util.Util.lerp(new1, top, bottom, t);
+
+
+                ////平底
+                if (middlex > middle.pos.x)
+                {
+                    drawTriangleBottom(top, new1, middle);
+                    drawTriangleTop( middle, new1, bottom);
+                }
+                else
+                {
+                    drawTriangleBottom(top, middle, new1);
+                    drawTriangleTop(new1, middle, bottom);
+                }
+                ////平顶
+                
             }
         }
         /// <summary>
@@ -333,7 +423,10 @@ namespace graphic_exercise
         /// <param name="v3"></param>
         private void drawTriangleBottom(Vertex v1, Vertex v2, Vertex v3)
         {
-           
+            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
+            //            + v2.pos.x + "   " + v2.pos.y + "    " + " " +
+            //            v3.pos.x + "   " + v3.pos.y + "    "
+            //            + v1.color.r + "  " + v1.color.g + " " + v1.color.b;
             for (float y = v1.pos.y; y <= v3.pos.y; y += 1f)
             {
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
@@ -341,25 +434,26 @@ namespace graphic_exercise
                 //裁剪掉屏幕外的线
                 if (yIndex >= 0 && yIndex < height)
                 {
-                    float xr = (y - v1.pos.y) * (v2.pos.x - v1.pos.x) / (v2.pos.y -v1.pos.y) +v1 .pos.x;
+                    
                     float xl = (y - v1.pos.y) * (v3.pos.x - v1.pos.x) / (v3.pos.y -v1.pos.y) +v1.pos.x;
+                    float xr = (y - v1.pos.y) * (v2.pos.x - v1.pos.x) / (v2.pos.y - v1.pos.y) + v1.pos.x;
                     //插值因子
-                    float t = (y - v3.pos.y) / (v1.pos.y - v3.pos.y);
+                    float t = (y - v1.pos.y) / (v3.pos.y - v1.pos.y);
 
                     //左顶点
                     Vertex left = new Vertex();
                     left.pos.x = xl;
                     left.pos.y = y;
-                    Util.Util.lerp(left, v3,v2, t);
+                    Util.Util.lerp(left, v1,v3, t);
                     //
                     Vertex right = new Vertex();
                     right.pos.x = xr;
                     right.pos.y = y;
-                    Util.Util.lerp(right, v3, v1, t);
+                    Util.Util.lerp(right, v1, v2, t);
 
-                    this.Text = left.pos.x + "   " + left.pos.y + "    " + " "
-                      + right.pos.x + "   " + right.pos.y + "    " + " " +
-                      xl + "   " + xr + "    ";
+                    //this.Text = left.pos.x + "   " + left.pos.y + "    " + " "
+                    //  + right.pos.x + "   " + right.pos.y + "    " + " " +
+                    //  xl + "   " + xr + "    ";
                     //扫描线填充
                     if (left.pos.x < right.pos.x)
                     {
@@ -437,6 +531,8 @@ namespace graphic_exercise
             }
             //插值因子
             float t = 0;
+            //该点像素的深度值
+            float death=0;
             for (float x = left.pos.x; x <= right.pos.x; x += 0.5f)
             {
                 if (dx != 0)
@@ -444,10 +540,17 @@ namespace graphic_exercise
                     t = (x - left.pos.x) / dx;
                 }
                 int xIndex = (int)(x + 0.5f);
+                
                 if (xIndex >= 0 && xIndex < width)
                 {
-                    graphic_exercise.RenderData.Color c = Util.Util.lerp(left.color, right.color,t);
-                    frameBuff.SetPixel(xIndex, yIndex, c.TransFormToSystemColor());
+                    death = Util.Util.lerp(left.depth, right.depth, t);
+                    if (zbuffer[xIndex,yIndex]>=death)
+                    {
+                        zbuffer[xIndex, yIndex] = death;
+                        graphic_exercise.RenderData.Color c = Util.Util.lerp(left.color, right.color, t);
+                        frameBuff.SetPixel(xIndex, yIndex, c.TransFormToSystemColor());
+                    }
+                    
                     //this.Text=c.r + " " + c.g + "  " + c.b + "  " + c.a;
 
                 }
@@ -459,7 +562,7 @@ namespace graphic_exercise
         Graphics g = null;
         //旋转角度
         private float rotX = 0;
-        private float rotY = 0;
+        private float rotY =0;//-(float)Math.PI/4;
         private float rotZ = 0;
         private void Tick()
         {
@@ -537,6 +640,22 @@ namespace graphic_exercise
         {
             t.Abort();
             //this.Text = "sdfsdf";
+        }
+
+        /// <summary>
+        /// 键盘事件监听
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.A)
+            {
+                
+            }
+
+            return true;
+            //return base.ProcessCmdKey(ref msg, keyData);
         }
 
     }

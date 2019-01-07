@@ -25,15 +25,24 @@ namespace graphic_exercise.RenderData
             vertexList = new List<Vertex>();
             indexsList = new List<Index>();
 
-            for(int i=0;i<posList.Length;i++)
-            {
-                Vertex v = new Vertex(posList[i], normals[i], uvList[i].x, uvList[i].y,colors[i]);
-                vertexList.Add(v);
-            }
-
+            //for(int i=0;i<posList.Length;i++)
+            //{
+            //    Vertex v = new Vertex(posList[i], normals[i], uvList[i].x, uvList[i].y,colors[i]);
+            //    vertexList.Add(v);
+            //}
+            int t = 0;
             for(int i=0;i<indexList.Length;i++)
             {
-                indexsList.Add(indexList[i]);
+                //indexsList.Add(indexList[i]);
+                Vertex v1 = new Vertex(posList[indexList[i].one], normals[t], uvList[t].x, uvList[t].y, colors[t]);
+                t++;
+                Vertex v2 = new Vertex(posList[indexList[i].two], normals[t], uvList[t].x, uvList[t].y, colors[t]);
+                t++;
+                Vertex v3 = new Vertex(posList[indexList[i].three], normals[t], uvList[t].x, uvList[t].y, colors[t]);
+                t++;
+                vertexList.Add(v1);
+                vertexList.Add(v2);
+                vertexList.Add(v3);
             }
         }
         

@@ -66,6 +66,8 @@ namespace graphic_exercise.Util
             //uv插值
             v.uv[0] = lerp(v1.uv[0], v2.uv[0], t);
             v.uv[1] = lerp(v1.uv[1], v2.uv[1], t);
+            //深度值插值
+            v.depth = lerp(v1.depth, v2.depth, t);
         }
     }
 }

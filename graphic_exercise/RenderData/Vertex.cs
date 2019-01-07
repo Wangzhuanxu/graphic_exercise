@@ -18,6 +18,10 @@ namespace graphic_exercise.RenderData
         /// 顶点颜色
         /// </summary>
         public Color color;
+        /// <summary>
+        /// 顶点深度值，用1/z表示
+        /// </summary>
+        public float depth;
         
         //初始化各项内容
         public Vertex(Vector pos,Vector normal,float uvx,float uvy,Color color)
