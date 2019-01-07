@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using graphic_exercise.Util;
 namespace graphic_exercise
 {
     public partial class Form1 : Form
@@ -37,12 +37,12 @@ namespace graphic_exercise
             this.Width = width;
             this.Height = height;
             //窗口标题
-            this.Text = "width=" + this.Width + "  height=" + this.Height;
+            //this.Text = "width=" + this.Width + "  height=" + this.Height;
             //初始化帧缓冲
             frameBuff = new Bitmap(this.Width, this.Height);
             frameG = Graphics.FromImage(frameBuff);
             //初始化顶点
-            triangles = new Triangle(TriangleTestData.pointList, TriangleTestData.indexs, TriangleTestData.uvs, TriangleTestData.norlmas);
+            triangles = new Triangle(TriangleTestData.pointList, TriangleTestData.indexs, TriangleTestData.uvs, TriangleTestData.norlmas,TriangleTestData.vertColors);
             //初始化摄像机 Vector look,Vector up,Vector pos,float fov,float aspect,float near,float far
             camera = new Camera(new Vector(0, 0, 30, 1), new Vector(0, 1, 0, 0), new Vector(0, 0, -1, 1), (float)System.Math.PI / 3, this.Width / (float)this.Height, 5f, 40f);
             t = new Thread(new ThreadStart(Tick));
@@ -90,7 +90,7 @@ namespace graphic_exercise
 
         public void clearBuff()
         {
-            frameG.Clear(Color.Black);//清除颜色缓存
+            frameG.Clear(new  graphic_exercise.RenderData.Color(0,1,0,0).TransFormToSystemColor());//清除颜色缓存
         }
         /// <summary>
         /// 绘制主方法
@@ -140,13 +140,18 @@ namespace graphic_exercise
             //           v3.pos.x + "   " + v3.pos.y + "    " ;
 
             //画线框
-            BresenhamDrawLine(v1, v2);
-            BresenhamDrawLine(v2, v3);
-            BresenhamDrawLine(v3, v1);
+            //BresenhamDrawLine(v1, v2);
+            //BresenhamDrawLine(v2, v3);
+            //BresenhamDrawLine(v3, v1);
 
-            this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
-                       + v2.pos.x + "   " + v2.pos.y + "    " + " " +
-                       v3.pos.x + "   " + v3.pos.y + "    ";
+
+
+            //光栅化
+            rasterizationTriangle(v1, v2, v3);
+
+            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
+            //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
+            //           v3.pos.x + "   " + v3.pos.y + "    ";
 
         }
         /// <summary>
@@ -261,6 +266,195 @@ namespace graphic_exercise
             }
 
         }
+        /// <summary>
+        /// 光栅化三角形
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <param name="v3"></param>
+        private void rasterizationTriangle(Vertex v1,Vertex v2,Vertex v3)
+        {
+           // this.Text = 123+ "";
+            if (v1.pos.y==v2.pos.y)
+            {
+                if(v1.pos.y<v3.pos.y)
+                {
+                    //平顶
+                    drawTriangleTop(v1, v2, v3);
+                    
+                }
+                else
+                {
+                    
+                    //平底
+                    drawTriangleBottom(v3, v1, v2);
+                }
+               
+            }
+            else if (v1.pos.y == v3.pos.y)
+            {
+                if (v1.pos.y < v2.pos.y)
+                {
+                    //平顶
+                    drawTriangleTop(v3, v1, v2);
+                }
+                else
+                {
+                    //平底
+                    drawTriangleBottom(v2, v3, v1);
+                }
+                
+            }
+            else if (v3.pos.y == v2.pos.y)
+            {
+                if (v3.pos.y < v1.pos.y)
+                {
+                    //平顶
+                    drawTriangleTop(v2, v3, v1);
+                }
+                else
+                {
+                    
+                    //平底
+                    drawTriangleBottom(v1, v2, v3);
+                }
+                
+            }
+            else
+            {
+                //需要分割三角形
+            }
+        }
+        /// <summary>
+        /// 平底三角形
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <param name="v3"></param>
+        private void drawTriangleBottom(Vertex v1, Vertex v2, Vertex v3)
+        {
+           
+            for (float y = v1.pos.y; y <= v3.pos.y; y += 1f)
+            {
+                //防止浮点数精度不准，四舍五入，使y的值每次增加1
+                int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
+                //裁剪掉屏幕外的线
+                if (yIndex >= 0 && yIndex < height)
+                {
+                    float xr = (y - v1.pos.y) * (v2.pos.x - v1.pos.x) / (v2.pos.y -v1.pos.y) +v1 .pos.x;
+                    float xl = (y - v1.pos.y) * (v3.pos.x - v1.pos.x) / (v3.pos.y -v1.pos.y) +v1.pos.x;
+                    //插值因子
+                    float t = (y - v3.pos.y) / (v1.pos.y - v3.pos.y);
+
+                    //左顶点
+                    Vertex left = new Vertex();
+                    left.pos.x = xl;
+                    left.pos.y = y;
+                    Util.Util.lerp(left, v3,v2, t);
+                    //
+                    Vertex right = new Vertex();
+                    right.pos.x = xr;
+                    right.pos.y = y;
+                    Util.Util.lerp(right, v3, v1, t);
+
+                    this.Text = left.pos.x + "   " + left.pos.y + "    " + " "
+                      + right.pos.x + "   " + right.pos.y + "    " + " " +
+                      xl + "   " + xr + "    ";
+                    //扫描线填充
+                    if (left.pos.x < right.pos.x)
+                    {
+                        scanLine(left, right, yIndex);
+                    }
+                    else
+                    {
+                        scanLine(right, left, yIndex);
+                    }
+
+                }
+             
+            }
+        }
+        /// <summary>
+        /// 平顶三角形
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <param name="v3"></param>
+        private void drawTriangleTop(Vertex v1, Vertex v2, Vertex v3)
+        {
+            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
+            //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
+            //           v3.pos.x + "   " + v3.pos.y + "    ";
+            for (float y = v1.pos.y; y <= v3.pos.y; y += 1f)
+            {
+                
+                //防止浮点数精度不准，四舍五入，使y的值每次增加1
+                int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
+                //裁剪掉屏幕外的线
+                if (yIndex >= 0 && yIndex < height)
+                {
+                    float xl = (y - v1.pos.y) * (v3.pos.x - v1.pos.x) / (v3.pos.y - v1.pos.y) + v1.pos.x;
+                    float xr = (y - v2.pos.y) * (v3.pos.x - v2.pos.x) / (v3.pos.y - v2.pos.y) + v2.pos.x;
+                    //插值因子
+                    float t = (y - v1.pos.y) / (v3.pos.y - v1.pos.y);
+
+                    //左顶点
+                    Vertex left = new Vertex();
+                    left.pos.x = xl;
+                    left.pos.y = y;
+                    Util.Util.lerp(left, v1, v3, t);
+                    //
+                    Vertex right = new Vertex();
+                    right.pos.x = xr;
+                    right.pos.y = y;
+                    Util.Util.lerp(right, v2, v3, t);
+                    //扫描线填充
+                    if (left.pos.x < right.pos.x)
+                    {
+                        scanLine(left, right, yIndex);
+                    }
+                    else
+                    {
+                        scanLine(right, left, yIndex);
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// 填充
+        /// </summary>
+        /// <param name="left"></param>
+        /// <param name="right"></param>
+        /// <param name="yIndex"></param>
+        private void scanLine(Vertex left, Vertex right, int yIndex)
+        {
+            
+            float dx = right.pos.x - left.pos.x;
+            float step = 1;
+            if (dx != 0)
+            {
+                step = 1 / dx;
+            }
+            //插值因子
+            float t = 0;
+            for (float x = left.pos.x; x <= right.pos.x; x += 0.5f)
+            {
+                if (dx != 0)
+                {
+                    t = (x - left.pos.x) / dx;
+                }
+                int xIndex = (int)(x + 0.5f);
+                if (xIndex >= 0 && xIndex < width)
+                {
+                    graphic_exercise.RenderData.Color c = Util.Util.lerp(left.color, right.color,t);
+                    frameBuff.SetPixel(xIndex, yIndex, c.TransFormToSystemColor());
+                    //this.Text=c.r + " " + c.g + "  " + c.b + "  " + c.a;
+
+                }
+                
+            }
+
+        }
 
         Graphics g = null;
         //旋转角度
@@ -320,9 +514,9 @@ namespace graphic_exercise
             {
                 g = this.CreateGraphics();
             }
-            g.Clear(Color.Black);
+            g.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());
+            
             g.DrawImage(frameBuff, 0, 0);
-            //this.Text = "x=" + x;
             // x++;
             try
             {
