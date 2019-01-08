@@ -59,15 +59,21 @@ namespace graphic_exercise.RenderData
         {
             return new Vertex(pos, normal, uv[0], uv[1],color);
         }
-
+        /// <summary>
+        /// 注意,绝对不能忘记重新设置w的值，否则再次的绘制是错误的，顶点的w初始值必须是1
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
         public static void Clone(Vertex v1,Vertex v2)
         {
             v2.pos.x = v1.pos.x;
             v2.pos.y = v1.pos.y;
             v2.pos.z = v1.pos.z;
+            v2.pos.w = v1.pos.w;
             v2.normal.x = v1.normal.x;
             v2.normal.y = v1.normal.y;
             v2.normal.z = v1.normal.z;
+            v2.normal.w = v1.normal.w;
             v2.uv[0] = v1.uv[0];
             v2.uv[1] = v1.uv[1];
             v2.color.r = v1.color.r;

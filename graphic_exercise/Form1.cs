@@ -1,4 +1,6 @@
-﻿using graphic_exercise.RenderData;
+﻿#define DEBUG
+
+using graphic_exercise.RenderData;
 using graphic_exercise.Test;
 using System;
 using System.Collections.Generic;
@@ -11,6 +13,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using graphic_exercise.Util;
+using System.Runtime.InteropServices;
+
 namespace graphic_exercise
 {
     public partial class Form1 : Form
@@ -28,13 +32,24 @@ namespace graphic_exercise
         Light light;
         int width = 800;
         int height = 600;
+
+        /// <summary>
+        /// 显示console窗口
+        /// </summary>
+        /// <returns></returns>
+        [DllImport("kernel32.dll")]
+        public static extern Boolean AllocConsole();
+        [DllImport("kernel32.dll")]
+        public static extern Boolean FreeConsole();
+
+
         public Form1()
         {
 
 
             InitializeComponent();
-
-
+            //显示Console窗口
+            AllocConsole();
             //设置窗口大小
             this.Width = width;
             this.Height = height;
@@ -45,6 +60,7 @@ namespace graphic_exercise
             frameG = Graphics.FromImage(frameBuff);
             //初始化顶点
             triangles = new Triangle(CubeTestDatacs.pointList, CubeTestDatacs.indexs, CubeTestDatacs.uvs, CubeTestDatacs.norlmas, CubeTestDatacs.vertColors);
+            //triangles = new Triangle(TriangleTestData.pointList, TriangleTestData.indexs, TriangleTestData.uvs, TriangleTestData.norlmas, TriangleTestData.vertColors);
             //初始化摄像机 Vector look,Vector up,Vector pos,float fov,float aspect,float near,float far
             camera = new Camera(new Vector(0, 0, 10, 1), new Vector(0, 1, 0, 0), new Vector(-2, 5, -1, 1), (float)System.Math.PI / 3, this.Width / (float)this.Height, 5f, 40f);
             //初始化深度缓冲
@@ -54,7 +70,6 @@ namespace graphic_exercise
             t = new Thread(new ThreadStart(Tick));
             t.Start();
             this.Closed += close;
-            //Tick();
             // 测试数据
             //Vector v = new Vector(1, 0, 0);
             //Matrix4x4 m = Matrix4x4.translate(5, 0, 25) * Matrix4x4.rotateY((float)(Math.PI / 18 * 15)) * Matrix4x4.scale(2, 2, 2);
@@ -87,7 +102,6 @@ namespace graphic_exercise
                 sb.Append("\n");
             }
             Vector v = new Vector(-1, 1, 8, 1);
-            ;
             v = mv * m * v;
             sb.Append(v.x + "  " + v.y + " " + v.z + " " + v.w + " " + v.z / v.w + "  " + 1 / v.w);
             l.Text = sb.ToString();
@@ -99,6 +113,9 @@ namespace graphic_exercise
             frameG.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());//清除颜色缓存
             clearDeath();
         }
+        /// <summary>
+        /// 清除深度缓冲
+        /// </summary>
         public void clearDeath()
         {
             for (int i = 0; i < zbuffer.GetLength(0); i++)
@@ -145,13 +162,26 @@ namespace graphic_exercise
         }
 
 
-
+        /// <summary>
+        /// 绘制三角形
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <param name="v3"></param>
+        /// <param name="m"></param>
+        /// <param name="v"></param>
+        /// <param name="p"></param>
         private void drawTriangle(Vertex v1, Vertex v2, Vertex v3, Matrix4x4 m, Matrix4x4 v, Matrix4x4 p)
         {
             ///本地到摄像机空间
             objectToCamera(m, v, v1);
             objectToCamera(m, v, v2);
             objectToCamera(m, v, v3);
+            //在相机空间进行背面消隐，原因是相机空间中，相机位置为0，0，0
+            if (backFaceCulling(v1, v2, v3) == false)
+            {
+                return;
+            }
 
             ///摄像机到裁剪空间
             cameraToProject(p, v1);
@@ -167,10 +197,12 @@ namespace graphic_exercise
             projectToScreen(v2);
             projectToScreen(v3);
 
-            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
+#if DEBUG
+            //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
             //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
             //           v3.pos.x + "   " + v3.pos.y + "    "
-            //           +v1.color.r+"  "+v1.color.g+" "+v1.color.b;
+            //          + v1.color.r + "  " + v1.color.g + " " + v1.color.b);
+#endif
 
             //画线框
             //BresenhamDrawLine(v1, v2);
@@ -181,10 +213,11 @@ namespace graphic_exercise
 
             //光栅化
             rasterizationTriangle(v1, v2, v3);
-
-            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
+#if DEBUG
+            //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
             //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
-            //           v3.pos.x + "   " + v3.pos.y + "    ";
+            //           v3.pos.x + "   " + v3.pos.y + "    ");
+#endif
 
         }
         /// <summary>
@@ -311,7 +344,6 @@ namespace graphic_exercise
         /// <param name="v3"></param>
         private void rasterizationTriangle(Vertex v1, Vertex v2, Vertex v3)
         {
-            // this.Text = 123+ "";
             if (v1.pos.y == v2.pos.y)
             {
                 if (v1.pos.y < v3.pos.y)
@@ -400,12 +432,6 @@ namespace graphic_exercise
                     middle = v3;
                     bottom = v2;
                 }
-                //else
-                //{
-                //    //三点共线
-                //    return;
-                //}
-
 
                 //插值求中间点x
                 float middlex = (middle.pos.y - top.pos.y) * (bottom.pos.x - top.pos.x) / (bottom.pos.y - top.pos.y) + top.pos.x;
@@ -442,10 +468,12 @@ namespace graphic_exercise
         /// <param name="v3"></param>
         private void drawTriangleBottom(Vertex v1, Vertex v2, Vertex v3)
         {
-            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
+#if DEBUG
+            //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
             //            + v2.pos.x + "   " + v2.pos.y + "    " + " " +
             //            v3.pos.x + "   " + v3.pos.y + "    "
-            //            + v1.color.r + "  " + v1.color.g + " " + v1.color.b;
+            //            + v1.color.r + "  " + v1.color.g + " " + v1.color.b);
+#endif
             for (float y = v1.pos.y; y < v3.pos.y; y += 1f)
             {
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
@@ -471,9 +499,11 @@ namespace graphic_exercise
                     right.pos.y = y;
                     Util.Util.lerp(right, v1, v2, t);
 
-                    //this.Text = left.pos.x + "   " + left.pos.y + "    " + " "
+#if DEBUG
+                    //Console.WriteLine(left.pos.x + "   " + left.pos.y + "    " + " "
                     //  + right.pos.x + "   " + right.pos.y + "    " + " " +
-                    //  xl + "   " + xr + "    ";
+                    //  xl + "   " + xr + "    ");
+#endif
                     //扫描线填充
                     if (left.pos.x < right.pos.x)
                     {
@@ -497,9 +527,6 @@ namespace graphic_exercise
         /// <param name="v3"></param>
         private void drawTriangleTop(Vertex v1, Vertex v2, Vertex v3)
         {
-            //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
-            //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
-            //           v3.pos.x + "   " + v3.pos.y + "    ";
             for (float y = v1.pos.y; y < v3.pos.y; y += 1f)
             {
 
@@ -608,16 +635,70 @@ namespace graphic_exercise
             Vector halfDir = (worldView + worldLight).normalize();
             graphic_exercise.RenderData.Color specular = light.LightColor * v1.material.specular * (float)Math.Pow(Math.Max(0, Vector.dot(worldNormal, halfDir)), v1.material.gloss);
         }
+        /// <summary>
+        /// 背面消隐，裁剪摄像机不可见的面,加快渲染效率,顺序必须是逆时针顺序
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <returns></returns>
+        bool backFaceCulling(Vertex v1, Vertex v2, Vertex v3)
+        {
+            //顺时针顺序,计算朝向外的发现，顺序必须为u* v;
+            Vector u = v2.pos - v1.pos;
+            Vector v = v3.pos - v1.pos;
+            Vector n = Vector.cross(u,v);//计算法线
+            //由于在视空间中，所以相机点就是（0,0,0）
+            Vector viewDir =  v2.pos- new Vector(0, 0, 0);
+#if DEBUG
+            Console.WriteLine(u.x + "   " + u.y + "    " + " " + u.z + "   "
+                       + v.x + "   " + v.y + "    " + " " + v.z + "   " +
+                       n.x + "   " + n.y + "    " + " " + n.z + "   " + "    " +
+                       viewDir.x + "   " + viewDir.y + "    " + " " + viewDir.z + "   " + Vector.dot(n, viewDir));
+#endif
+
+            if (Vector.dot(n, viewDir) > 0)
+            {
+                //夹角小于90度
+                triangleNum++;
+                return true;
+            }
+            //夹角大于90度，说明面不可见
+            return false;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         Graphics g = null;
         //旋转角度
         private float rotX = 0;
         private float rotY = 0;//-(float)Math.PI/4;
         private float rotZ = 0;
+        //帧率变量
+        private TimeSpan timeSpan;
+        private DateTime lastTime;
+        private DateTime now;
+
+        //三角形个数
+        private int triangleNum = 0;
         private void Tick()
         {
             while (true)
             {
+                triangleNum = 0;
                 lastTime = DateTime.Now;
                 //清除颜色缓存
                 clearBuff();
@@ -634,32 +715,16 @@ namespace graphic_exercise
                 g.DrawImage(frameBuff, 0, 0);
                 now = DateTime.Now;
                 timeSpan = now - lastTime;
-                this.Text = 1000 / timeSpan.TotalMilliseconds + "";
+                this.Text ="帧率："+(int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds)+ "         绘制的三角形个数:"+triangleNum;
                 lastTime = now;
-                try
-                {
-                    
-                }
-                catch(Exception e)
-                {
-
-                }
             }
 
         }
 
-
-
-        private TimeSpan timeSpan;
-        private DateTime lastTime;
-        private DateTime now;
-        private int x = 0;
-        /// <summary>
-        /// 刷帧方法
-        /// </summary>
-        /// <param name="e"></param>
+        
         protected override void OnPaint(PaintEventArgs e)
         {
+            //triangleNum = 0;
             //lastTime = DateTime.Now;
             ////清除颜色缓存
             //clearBuff();
@@ -673,14 +738,11 @@ namespace graphic_exercise
             //{
             //    g = this.CreateGraphics();
             //}
-            //g.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());
             //g.DrawImage(frameBuff, 0, 0);
             //now = DateTime.Now;
             //timeSpan = now - lastTime;
-            //this.Text = 1000 / timeSpan.TotalMilliseconds + "";
+            //this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) + "         绘制的三角形个数:" + triangleNum;
             //lastTime = now;
-            //x++;
-            //this.Text = "x=" + x;
         }
 
        
@@ -729,7 +791,6 @@ namespace graphic_exercise
             }
 
             return true;
-            //return base.ProcessCmdKey(ref msg, keyData);
         }
 
     }
