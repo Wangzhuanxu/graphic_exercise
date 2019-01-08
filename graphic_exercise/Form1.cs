@@ -96,7 +96,7 @@ namespace graphic_exercise
 
         public void clearBuff()
         {
-            frameG.Clear(new graphic_exercise.RenderData.Color(0, 1, 0, 0).TransFormToSystemColor());//清除颜色缓存
+            frameG.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());//清除颜色缓存
             clearDeath();
         }
         public void clearDeath()
@@ -270,8 +270,9 @@ namespace graphic_exercise
             if (dx > dy)
             {
                 int error = dy2 - dx;
-                for (int i = 0; i <= dx; i++)
+                for (int i = 0; i < dx; i++)
                 {
+                    if(x>=0&&y>=0&&x<=width&&y<=height)
                     frameBuff.SetPixel(x, y, System.Drawing.Color.White);
                     if (error >= 0)
                     {
@@ -286,9 +287,10 @@ namespace graphic_exercise
             else
             {
                 int error = dx2 - dy;
-                for (int i = 0; i <= dy; i++)
+                for (int i = 0; i <dy; i++)
                 {
-                    frameBuff.SetPixel(x, y, System.Drawing.Color.White);
+                    if (x >= 0 && y >= 0 && x <= width && y <= height)
+                        frameBuff.SetPixel(x, y, System.Drawing.Color.White);
                     if (error >= 0)
                     {
                         error -= dy2;
@@ -444,10 +446,11 @@ namespace graphic_exercise
             //            + v2.pos.x + "   " + v2.pos.y + "    " + " " +
             //            v3.pos.x + "   " + v3.pos.y + "    "
             //            + v1.color.r + "  " + v1.color.g + " " + v1.color.b;
-            for (float y = v1.pos.y; y <= v3.pos.y; y += 1f)
+            for (float y = v1.pos.y; y < v3.pos.y; y += 1f)
             {
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
-                int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
+                // int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
+                int yIndex = (int)Math.Ceiling(y);
                 //裁剪掉屏幕外的线
                 if (yIndex >= 0 && yIndex < height)
                 {
@@ -485,6 +488,7 @@ namespace graphic_exercise
 
             }
         }
+
         /// <summary>
         /// 平顶三角形
         /// </summary>
@@ -496,11 +500,12 @@ namespace graphic_exercise
             //this.Text = v1.pos.x + "   " + v1.pos.y + "    " + " "
             //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
             //           v3.pos.x + "   " + v3.pos.y + "    ";
-            for (float y = v1.pos.y; y <= v3.pos.y; y += 1f)
+            for (float y = v1.pos.y; y < v3.pos.y; y += 1f)
             {
 
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
-                int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
+                //int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
+                int yIndex = (int)Math.Ceiling(y);
                 //裁剪掉屏幕外的线
                 if (yIndex >= 0 && yIndex < height)
                 {
@@ -531,6 +536,9 @@ namespace graphic_exercise
                 }
             }
         }
+
+
+
         /// <summary>
         /// 填充
         /// </summary>
@@ -550,13 +558,13 @@ namespace graphic_exercise
             float t = 0;
             //该点像素的深度值
             float death = 0;
-            for (float x = left.pos.x; x <= right.pos.x; x += 0.5f)
+            for (float x = left.pos.x; x <= right.pos.x; x += 1f)
             {
                 if (dx != 0)
                 {
                     t = (x - left.pos.x) / dx;
                 }
-                int xIndex = (int)(x + 0.5f);
+                int xIndex = (int)Math.Ceiling(x);
                 //int xIndex = (int)(System.Math.Round(x, MidpointRounding.AwayFromZero));
                 if (xIndex >= 0 && xIndex < width)
                 {
@@ -569,7 +577,6 @@ namespace graphic_exercise
                         frameBuff.SetPixel(xIndex, yIndex, c.TransFormToSystemColor());
                     }
 
-                    //this.Text=c.r + " " + c.g + "  " + c.b + "  " + c.a;
 
                 }
 
@@ -624,7 +631,6 @@ namespace graphic_exercise
                 {
                     g = this.CreateGraphics();
                 }
-                g.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());
                 g.DrawImage(frameBuff, 0, 0);
                 now = DateTime.Now;
                 timeSpan = now - lastTime;
