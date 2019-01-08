@@ -89,7 +89,7 @@ namespace graphic_exercise.Test
 
         //顶点颜色
         public static Color[] vertColors = {
-                                             new Color( 1, 0, 0,1), new Color( 0, 1, 0,1), new Color( 0, 0, 1,1),
+                                             new Color( 1, 0, 0,1), new Color( 0, 0, 1,1), new Color( 0, 1, 0,1),
                                                new Color( 1, 0, 0,1), new Color( 0, 1, 0,1), new Color( 0, 0, 1,1),
                                                ////
                                                 new Color( 0, 1, 0,1), new Color( 0, 0, 1,1), new Color( 1, 0, 0,1),

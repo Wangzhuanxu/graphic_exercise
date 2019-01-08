@@ -25,8 +25,9 @@ namespace graphic_exercise
         private Triangle triangles;//三角形类，也就是mesh类
         private Camera camera;//摄像机类
         private float[,] zbuffer;//深度缓冲
-        int width=800;
-        int height=600;
+        Light light;
+        int width = 800;
+        int height = 600;
         public Form1()
         {
 
@@ -46,9 +47,14 @@ namespace graphic_exercise
             triangles = new Triangle(CubeTestDatacs.pointList, CubeTestDatacs.indexs, CubeTestDatacs.uvs, CubeTestDatacs.norlmas, CubeTestDatacs.vertColors);
             //初始化摄像机 Vector look,Vector up,Vector pos,float fov,float aspect,float near,float far
             camera = new Camera(new Vector(0, 0, 10, 1), new Vector(0, 1, 0, 0), new Vector(-2, 5, -1, 1), (float)System.Math.PI / 3, this.Width / (float)this.Height, 5f, 40f);
-
+            //初始化深度缓冲
             zbuffer = new float[width, height];
-
+            //初始化灯光
+            light = new Light(new Vector(0, 5, 5), graphic_exercise.RenderData.Color.Green);
+            t = new Thread(new ThreadStart(Tick));
+            t.Start();
+            this.Closed += close;
+            //Tick();
             // 测试数据
             //Vector v = new Vector(1, 0, 0);
             //Matrix4x4 m = Matrix4x4.translate(5, 0, 25) * Matrix4x4.rotateY((float)(Math.PI / 18 * 15)) * Matrix4x4.scale(2, 2, 2);
@@ -59,7 +65,7 @@ namespace graphic_exercise
             //l.SetBounds(100, 100, 300, 300);
             //this.Controls.Add(l);
             //print(l, m, vv, p);
-            
+
 
         }
         /// <summary>
@@ -82,22 +88,22 @@ namespace graphic_exercise
             }
             Vector v = new Vector(-1, 1, 8, 1);
             ;
-            v =mv* m * v;
-            sb.Append(v.x + "  " + v.y + " " + v.z + " " + v.w+" "+v.z/v.w+"  "+1/v.w );
+            v = mv * m * v;
+            sb.Append(v.x + "  " + v.y + " " + v.z + " " + v.w + " " + v.z / v.w + "  " + 1 / v.w);
             l.Text = sb.ToString();
         }
 
 
         public void clearBuff()
         {
-            frameG.Clear(new  graphic_exercise.RenderData.Color(0,1,0,0).TransFormToSystemColor());//清除颜色缓存
+            frameG.Clear(new graphic_exercise.RenderData.Color(0, 1, 0, 0).TransFormToSystemColor());//清除颜色缓存
             clearDeath();
         }
         public void clearDeath()
         {
-            for(int i=0;i<zbuffer.GetLength(0);i++)
+            for (int i = 0; i < zbuffer.GetLength(0); i++)
             {
-                for(int j=0;j<zbuffer.GetLength(1);j++)
+                for (int j = 0; j < zbuffer.GetLength(1); j++)
                 {
                     zbuffer[i, j] = 1;
                 }
@@ -109,33 +115,44 @@ namespace graphic_exercise
         /// <param name="m"></param>
         /// <param name="v"></param>
         /// <param name="p"></param>
-        private void draw(Matrix4x4 m,Matrix4x4 v,Matrix4x4 p)
+        Vertex p1=new Vertex();
+        Vertex p2=new Vertex();
+        Vertex p3=new Vertex();
+        private void draw(Matrix4x4 m, Matrix4x4 v, Matrix4x4 p)
         {
+            
             for (int i = 0; i < triangles.vertexList.Count; i += 3)//遍历顶点索引数组
             {
+                Vertex.Clone(triangles.vertexList[i], p1);
+                Vertex.Clone(triangles.vertexList[i + 1], p2);
+                Vertex.Clone(triangles.vertexList[i + 2], p3);
+                drawTriangle(p1,
+                   p2,
+                    p3
+                    , m, v, p);
                 //drawTriangle(triangles.vertexList[triangles.indexsList[i].one].clone(), 
                 //    triangles.vertexList[triangles.indexsList[i].two].clone(), 
                 //    triangles.vertexList[triangles.indexsList[i].three].clone()
                 //    , m, v, p);
-                drawTriangle(triangles.vertexList[i].clone(),
-                    triangles.vertexList[i + 1].clone(),
-                    triangles.vertexList[i + 2].clone()
-                    , m, v, p);
+                //drawTriangle(triangles.vertexList[i].clone(),
+                //    triangles.vertexList[i + 1].clone(),
+                //    triangles.vertexList[i + 2].clone()
+                //    , m, v, p);
                 //this.Text = triangles.vertexList[triangles.indexsList[i].one].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].one].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].one].pos.z + " "
                 //           + triangles.vertexList[triangles.indexsList[i].two].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].two].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].two].pos.z + " " +
                 //           triangles.vertexList[triangles.indexsList[i].three].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].three].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].three].pos.z;
             }
         }
 
-        
 
-        private  void drawTriangle(Vertex v1,Vertex v2, Vertex v3,Matrix4x4 m,Matrix4x4 v,Matrix4x4 p)
+
+        private void drawTriangle(Vertex v1, Vertex v2, Vertex v3, Matrix4x4 m, Matrix4x4 v, Matrix4x4 p)
         {
             ///本地到摄像机空间
             objectToCamera(m, v, v1);
             objectToCamera(m, v, v2);
             objectToCamera(m, v, v3);
-            
+
             ///摄像机到裁剪空间
             cameraToProject(p, v1);
             cameraToProject(p, v2);
@@ -184,7 +201,7 @@ namespace graphic_exercise
         /// </summary>
         /// <param name="m"></param>
         /// <param name="v"></param>
-        private void objectToCamera(Matrix4x4 m,Matrix4x4 v, Vertex vv)
+        private void objectToCamera(Matrix4x4 m, Matrix4x4 v, Vertex vv)
         {
             vv.pos = v * m * vv.pos;
         }
@@ -194,11 +211,11 @@ namespace graphic_exercise
         //    if()
         //}
 
-       /// <summary>
-       /// 透视除法
-       /// </summary>
-       private void projectToScreen(Vertex v)
-       {
+        /// <summary>
+        /// 透视除法
+        /// </summary>
+        private void projectToScreen(Vertex v)
+        {
             if (v.pos.w != 0)
             {
                 //先进行透视除法，转到NDC
@@ -207,10 +224,10 @@ namespace graphic_exercise
                 v.pos.z *= 1 / v.pos.w;
                 v.pos.w = 1;
                 //保存顶点的深度值
-                v.depth = (v.pos.z+1)/2;
+                v.depth = (v.pos.z + 1) / 2;
                 //NDC到屏幕坐标
                 v.pos.x = (v.pos.x + 1) * 0.5f * width;
-                v.pos.y = (1 -v.pos.y) * 0.5f * height;
+                v.pos.y = (1 - v.pos.y) * 0.5f * height;
             }
         }
 
@@ -290,24 +307,24 @@ namespace graphic_exercise
         /// <param name="v1"></param>
         /// <param name="v2"></param>
         /// <param name="v3"></param>
-        private void rasterizationTriangle(Vertex v1,Vertex v2,Vertex v3)
+        private void rasterizationTriangle(Vertex v1, Vertex v2, Vertex v3)
         {
-           // this.Text = 123+ "";
-            if (v1.pos.y==v2.pos.y)
+            // this.Text = 123+ "";
+            if (v1.pos.y == v2.pos.y)
             {
-                if(v1.pos.y<v3.pos.y)
+                if (v1.pos.y < v3.pos.y)
                 {
                     //平顶
                     drawTriangleTop(v1, v2, v3);
-                    
+
                 }
                 else
                 {
-                    
+
                     //平底
                     drawTriangleBottom(v3, v1, v2);
                 }
-               
+
             }
             else if (v1.pos.y == v3.pos.y)
             {
@@ -321,7 +338,7 @@ namespace graphic_exercise
                     //平底
                     drawTriangleBottom(v2, v3, v1);
                 }
-                
+
             }
             else if (v3.pos.y == v2.pos.y)
             {
@@ -332,16 +349,16 @@ namespace graphic_exercise
                 }
                 else
                 {
-                    
+
                     //平底
                     drawTriangleBottom(v1, v2, v3);
                 }
-                
+
             }
             else
             {
                 //分割三角形,先求出三角形的三个顶点y值大小
-                Vertex top=new Vertex();
+                Vertex top = new Vertex();
                 Vertex bottom = new Vertex();
                 Vertex middle = new Vertex();
                 //                                              y由大到小，y小的在上
@@ -351,7 +368,7 @@ namespace graphic_exercise
                     middle = v2;
                     bottom = v1;
                 }
-                else if (v3.pos.y >v2.pos.y && v2.pos.y > v1.pos.y)//3 2 1
+                else if (v3.pos.y > v2.pos.y && v2.pos.y > v1.pos.y)//3 2 1
                 {
                     top = v1;
                     middle = v2;
@@ -404,7 +421,7 @@ namespace graphic_exercise
                 if (middlex > middle.pos.x)
                 {
                     drawTriangleBottom(top, new1, middle);
-                    drawTriangleTop( middle, new1, bottom);
+                    drawTriangleTop(middle, new1, bottom);
                 }
                 else
                 {
@@ -412,7 +429,7 @@ namespace graphic_exercise
                     drawTriangleTop(new1, middle, bottom);
                 }
                 ////平顶
-                
+
             }
         }
         /// <summary>
@@ -434,8 +451,8 @@ namespace graphic_exercise
                 //裁剪掉屏幕外的线
                 if (yIndex >= 0 && yIndex < height)
                 {
-                    
-                    float xl = (y - v1.pos.y) * (v3.pos.x - v1.pos.x) / (v3.pos.y -v1.pos.y) +v1.pos.x;
+
+                    float xl = (y - v1.pos.y) * (v3.pos.x - v1.pos.x) / (v3.pos.y - v1.pos.y) + v1.pos.x;
                     float xr = (y - v1.pos.y) * (v2.pos.x - v1.pos.x) / (v2.pos.y - v1.pos.y) + v1.pos.x;
                     //插值因子
                     float t = (y - v1.pos.y) / (v3.pos.y - v1.pos.y);
@@ -444,7 +461,7 @@ namespace graphic_exercise
                     Vertex left = new Vertex();
                     left.pos.x = xl;
                     left.pos.y = y;
-                    Util.Util.lerp(left, v1,v3, t);
+                    Util.Util.lerp(left, v1, v3, t);
                     //
                     Vertex right = new Vertex();
                     right.pos.x = xr;
@@ -465,7 +482,7 @@ namespace graphic_exercise
                     }
 
                 }
-             
+
             }
         }
         /// <summary>
@@ -481,7 +498,7 @@ namespace graphic_exercise
             //           v3.pos.x + "   " + v3.pos.y + "    ";
             for (float y = v1.pos.y; y <= v3.pos.y; y += 1f)
             {
-                
+
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
                 int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
                 //裁剪掉屏幕外的线
@@ -522,7 +539,7 @@ namespace graphic_exercise
         /// <param name="yIndex"></param>
         private void scanLine(Vertex left, Vertex right, int yIndex)
         {
-            
+
             float dx = right.pos.x - left.pos.x;
             float step = 1;
             if (dx != 0)
@@ -532,7 +549,7 @@ namespace graphic_exercise
             //插值因子
             float t = 0;
             //该点像素的深度值
-            float death=0;
+            float death = 0;
             for (float x = left.pos.x; x <= right.pos.x; x += 0.5f)
             {
                 if (dx != 0)
@@ -540,96 +557,127 @@ namespace graphic_exercise
                     t = (x - left.pos.x) / dx;
                 }
                 int xIndex = (int)(x + 0.5f);
-                
+                //int xIndex = (int)(System.Math.Round(x, MidpointRounding.AwayFromZero));
                 if (xIndex >= 0 && xIndex < width)
                 {
+                    ///计算该片元的深度值
                     death = Util.Util.lerp(left.depth, right.depth, t);
-                    if (zbuffer[xIndex,yIndex]>=death)
+                    if (zbuffer[xIndex, yIndex] >= death)
                     {
                         zbuffer[xIndex, yIndex] = death;
                         graphic_exercise.RenderData.Color c = Util.Util.lerp(left.color, right.color, t);
                         frameBuff.SetPixel(xIndex, yIndex, c.TransFormToSystemColor());
                     }
-                    
+
                     //this.Text=c.r + " " + c.g + "  " + c.b + "  " + c.a;
 
                 }
-                
+
             }
 
+        }
+        /// <summary>
+        /// 逐顶点光照
+        /// </summary>
+        /// <param name="v1"></param>
+        private void vertexLighting(Vertex v1, Matrix4x4 m)
+        {
+            //环境光
+            graphic_exercise.RenderData.Color ambient = v1.material.ambient;
+            //世界坐标
+            Vector worldPos = m * v1.pos;
+            //将法线转到世界坐标
+            Vector worldNormal = m.Inverse().Transpose() * v1.normal;
+            worldNormal.normalize();
+            //光线方向
+            Vector worldLight = light.WorldSpaceLightPos;
+            worldLight.normalize();
+            //视线方向
+            Vector worldView = camera.pos - worldPos;
+            worldView.normalize();
+            //漫反射
+            graphic_exercise.RenderData.Color diffuse = light.LightColor * v1.material.diffuse * Math.Max(0, Vector.dot(worldNormal, worldLight));
+            //半
+            Vector halfDir = (worldView + worldLight).normalize();
+            graphic_exercise.RenderData.Color specular = light.LightColor * v1.material.specular * (float)Math.Pow(Math.Max(0, Vector.dot(worldNormal, halfDir)), v1.material.gloss);
         }
 
         Graphics g = null;
         //旋转角度
         private float rotX = 0;
-        private float rotY =0;//-(float)Math.PI/4;
+        private float rotY = 0;//-(float)Math.PI/4;
         private float rotZ = 0;
         private void Tick()
         {
-           //int x = 0;
-            //while (true)
-            //{
-            //    //清除颜色缓存
-            //    clearBuff();
-            //    //求mvp矩阵
-            //    Matrix4x4 m = Matrix4x4.translate(0, 0, 10) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
-            //    Matrix4x4 v = Matrix4x4.view(camera.look, camera.up, camera.pos);
-            //    Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
-            //    //绘制
-            //    draw(m, v, p);
+            while (true)
+            {
+                lastTime = DateTime.Now;
+                //清除颜色缓存
+                clearBuff();
+                //求mvp矩阵
+                Matrix4x4 m = Matrix4x4.translate(0, 0, 10) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
+                Matrix4x4 v = Matrix4x4.view(camera.look, camera.up, camera.pos);
+                Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
+                //绘制
+                draw(m, v, p);
+                if (g == null)
+                {
+                    g = this.CreateGraphics();
+                }
+                g.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());
+                g.DrawImage(frameBuff, 0, 0);
+                now = DateTime.Now;
+                timeSpan = now - lastTime;
+                this.Text = 1000 / timeSpan.TotalMilliseconds + "";
+                lastTime = now;
+                try
+                {
+                    
+                }
+                catch(Exception e)
+                {
 
-            //    if (g == null)
-            //    {
-            //        g = this.CreateGraphics();
-            //    }
-            //    g.Clear(Color.Black);
-            //    g.DrawImage(frameBuff, 0, 0);
-            //    //this.Text = "x=" + x;
-            //   // x++;
-            //    try
-            //    {
-            //        Thread.Sleep(1000);//帧数
-            //    }
-            //    catch (Exception e)
-            //    {
-            //        Console.WriteLine(e.Data);
-            //    }
-            //}
+                }
+            }
 
         }
 
+
+
+        private TimeSpan timeSpan;
+        private DateTime lastTime;
+        private DateTime now;
+        private int x = 0;
         /// <summary>
         /// 刷帧方法
         /// </summary>
         /// <param name="e"></param>
         protected override void OnPaint(PaintEventArgs e)
         {
-            //清除颜色缓存
-            clearBuff();
-            //求mvp矩阵
-            Matrix4x4 m = Matrix4x4.translate(0, 0, 10) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
-            Matrix4x4 v = Matrix4x4.view(camera.look, camera.up, camera.pos);
-            Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
-            //绘制
-            draw(m, v, p);
-
-            if (g == null)
-            {
-                g = this.CreateGraphics();
-            }
-            g.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());
-            
-            g.DrawImage(frameBuff, 0, 0);
-            // x++;
-            try
-            {
-                Thread.Sleep(1000);//帧数
-            }
-            catch (Exception ee)
-            {
-                Console.WriteLine(ee.Data);
-            }
+            //lastTime = DateTime.Now;
+            ////清除颜色缓存
+            //clearBuff();
+            ////求mvp矩阵
+            //Matrix4x4 m = Matrix4x4.translate(0, 0, 10) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
+            //Matrix4x4 v = Matrix4x4.view(camera.look, camera.up, camera.pos);
+            //Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
+            ////绘制
+            //draw(m, v, p);
+            //if (g == null)
+            //{
+            //    g = this.CreateGraphics();
+            //}
+            //g.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());
+            //g.DrawImage(frameBuff, 0, 0);
+            //now = DateTime.Now;
+            //timeSpan = now - lastTime;
+            //this.Text = 1000 / timeSpan.TotalMilliseconds + "";
+            //lastTime = now;
+            //x++;
+            //this.Text = "x=" + x;
         }
+
+       
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -649,9 +697,29 @@ namespace graphic_exercise
         /// <param name="e"></param>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == Keys.A)
+            if (keyData == Keys.W)
             {
-                
+                camera.pos.z += 0.1f;
+            }
+            else if(keyData == Keys.S)
+            {
+                camera.pos.z -= 0.1f;
+            }
+            else if (keyData == Keys.A)
+            {
+                camera.pos.x -= 0.1f;
+            }
+            else if (keyData == Keys.D)
+            {
+                camera.pos.x += 0.1f;
+            }
+            else if (keyData == Keys.Q)
+            {
+                camera.pos.y += 0.1f;
+            }
+            else if (keyData == Keys.E)
+            {
+                camera.pos.y -= 0.1f;
             }
 
             return true;
