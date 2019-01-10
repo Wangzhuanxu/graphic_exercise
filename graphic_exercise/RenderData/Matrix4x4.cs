@@ -359,7 +359,7 @@ namespace graphic_exercise.RenderData
             Vector U = Vector.cross( up,N);
             U.normalize();
             up = Vector.cross( N,U);
-
+            up.normalize();
             Matrix4x4 t = new Matrix4x4
             (
                  1, 0, 0, -pos.x,
@@ -367,15 +367,16 @@ namespace graphic_exercise.RenderData
                  0, 0, 1, -pos.z,
                  0, 0, 0, 1
             );
-
+            
             Matrix4x4 r = new Matrix4x4
                 (
-                     U.x,  U.y,  U.y,  0,
+                     U.x,  U.y,  U.z,  0,
                      up.x, up.y, up.z, 0,
                      N.x,  N.y,  N.z,  0,
                      0,    0,    0,    1
 
                 );
+
             Matrix4x4 m = new Matrix4x4();
             m.Identity();
             m[2, 2] = -1;
@@ -398,6 +399,9 @@ namespace graphic_exercise.RenderData
             p[2, 2] =( far+near )/ ( near-far);
             p[2, 3] = (2*far * near) / (near - far);
             p[3, 2] = -1f;
+
+       
+
             return p;
         }
 

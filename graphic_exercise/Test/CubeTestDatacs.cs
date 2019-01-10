@@ -106,6 +106,12 @@ namespace graphic_exercise.Test
                                                //
                                                 new Color( 0, 1, 0,1), new Color( 0, 0, 1,1), new Color( 1, 0, 0,1),
                                                new Color( 0, 1, 0,1), new Color( 1, 0, 0,1), new Color( 0, 0, 1,1)
+
+
+
                                          };
+
+        //材质
+        public static Material mat = new Material(new Color(0.1f, 0, 0f, 1), new Color(1f, 0, 0.1f, 1), new Color(0, 1,1, 1), 1);
     }
 }

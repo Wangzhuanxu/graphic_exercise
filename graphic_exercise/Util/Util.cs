@@ -16,7 +16,7 @@ namespace graphic_exercise.Util
         /// <param name="c2"></param>
         /// <param name="t"></param>
         /// <returns></returns>
-        public static Color lerp(Color c1,Color c2,float t)
+        public static graphic_exercise.RenderData.Color lerp(graphic_exercise.RenderData.Color c1, graphic_exercise.RenderData.Color c2,float t)
         {
             if(t<0)
             {
@@ -68,6 +68,10 @@ namespace graphic_exercise.Util
             v.uv[1] = lerp(v1.uv[1], v2.uv[1], t);
             //深度值插值
             v.depth = lerp(v1.depth, v2.depth, t);
+            //光照颜色插值
+            v.lightColor =lerp(v1.lightColor, v2.lightColor, t);
+            //插值矫正系数
+            v.onePerZ = lerp(v1.onePerZ, v2.onePerZ, t);
         }
     }
 }

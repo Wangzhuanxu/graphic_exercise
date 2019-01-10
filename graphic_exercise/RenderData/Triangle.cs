@@ -20,7 +20,7 @@ namespace graphic_exercise.RenderData
         /// <param name="vertexList">顶点位置列表</param>
         /// <param name="indexList">索引列表</param>
         /// <param name="uvList">uv坐标</param>
-        public Triangle(Vector[] posList,Index []indexList,UV []uvList,Vector[] normals,Color[] colors)
+        public Triangle(Vector[] posList,Index []indexList,UV []uvList,Vector[] normals,Color[] colors,Material material)
         {
             vertexList = new List<Vertex>();
             indexsList = new List<Index>();
@@ -34,11 +34,11 @@ namespace graphic_exercise.RenderData
             for(int i=0;i<indexList.Length;i++)
             {
                 //indexsList.Add(indexList[i]);
-                Vertex v1 = new Vertex(posList[indexList[i].one], normals[t], uvList[t].x, uvList[t].y, colors[t]);
+                Vertex v1 = new Vertex(posList[indexList[i].one], normals[t], uvList[t].x, uvList[t].y, colors[t],material);
                 t++;
-                Vertex v2 = new Vertex(posList[indexList[i].two], normals[t], uvList[t].x, uvList[t].y, colors[t]);
+                Vertex v2 = new Vertex(posList[indexList[i].two], normals[t], uvList[t].x, uvList[t].y, colors[t], material);
                 t++;
-                Vertex v3 = new Vertex(posList[indexList[i].three], normals[t], uvList[t].x, uvList[t].y, colors[t]);
+                Vertex v3 = new Vertex(posList[indexList[i].three], normals[t], uvList[t].x, uvList[t].y, colors[t], material);
                 t++;
                 vertexList.Add(v1);
                 vertexList.Add(v2);

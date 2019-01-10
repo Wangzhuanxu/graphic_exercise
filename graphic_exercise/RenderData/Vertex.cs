@@ -31,9 +31,13 @@ namespace graphic_exercise.RenderData
         /// 选用的材质
         /// </summary>
         public Material material;
+        /// <summary>
+        /// 插值矫正系数，用于纹理的插值矫正
+        /// </summary>
+        public float onePerZ;
         
         //初始化各项内容
-        public Vertex(Vector pos,Vector normal,float uvx,float uvy,Color color)
+        public Vertex(Vector pos,Vector normal,float uvx,float uvy,Color color,Material material)
         {
             this.pos = pos;
             this.normal = normal;
@@ -41,6 +45,8 @@ namespace graphic_exercise.RenderData
             uv[0] = uvx;
             uv[1] = uvy;
             this.color=color;
+            this.material = material;
+            this.lightColor = new Color();
         }
 
         public Vertex()
@@ -49,6 +55,8 @@ namespace graphic_exercise.RenderData
             this.color = new Color();
             this.uv = new float[2];
             this.normal = new Vector();
+            this.lightColor = new Color();
+            this.material = new Material();
         }
 
         /// <summary>
@@ -57,7 +65,7 @@ namespace graphic_exercise.RenderData
         /// <returns></returns>
         public Vertex clone()
         {
-            return new Vertex(pos, normal, uv[0], uv[1],color);
+            return new Vertex(pos, normal, uv[0], uv[1],color,material);
         }
         /// <summary>
         /// 注意,绝对不能忘记重新设置w的值，否则再次的绘制是错误的，顶点的w初始值必须是1
@@ -80,6 +88,17 @@ namespace graphic_exercise.RenderData
             v2.color.g = v1.color.g;
             v2.color.b = v1.color.b;
             v2.color.a = v1.color.a;
+            v2.lightColor.r = v1.lightColor.r;
+            v2.lightColor.g = v1.lightColor.g;
+            v2.lightColor.b = v1.lightColor.b;
+            v2.lightColor.a = v1.lightColor.a;
+
+            v2.material.ambient = v1.material.ambient;
+            v2.material.diffuse = v1.material.diffuse;
+            v2.material.specular = v1.material.specular;
+            v2.material.gloss = v1.material.gloss;
+
+            v2.onePerZ = v1.onePerZ;
         }
     }
 }

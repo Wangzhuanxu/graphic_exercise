@@ -24,6 +24,11 @@ namespace graphic_exercise.RenderData
         /// 光泽度
         /// </summary>
         public float gloss;
+        
+        public Material()
+        {
+
+        }
 
         public Material(Color ambient, Color diffuse, Color specular,float gloss)
         {

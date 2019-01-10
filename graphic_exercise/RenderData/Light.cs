@@ -13,7 +13,7 @@ namespace graphic_exercise.RenderData
         /// </summary>
         public Vector WorldSpaceLightPos;
         /// <summary>
-        /// 灯光颜色
+        /// 灯光颜色,也就是光照强度
         /// </summary>
         public Color LightColor;
 
@@ -22,5 +22,29 @@ namespace graphic_exercise.RenderData
             this.WorldSpaceLightPos = WorldSpaceLightPos;
             this.LightColor = LightColor;
         }
+    }
+    /// <summary>
+    /// 是否启用光照
+    /// </summary>
+    enum LightMode
+    {
+        ON,
+        OFF
+    }
+    /// <summary>
+    /// 绘制模式
+    /// </summary>
+    enum RenderMode
+    {
+        Wireframe,//线框
+        Entity//实体
+    }
+    /// <summary>
+    /// 背面剪裁
+    /// </summary>
+    enum FaceCullMode
+    {
+        ON,
+        OFF
     }
 }
