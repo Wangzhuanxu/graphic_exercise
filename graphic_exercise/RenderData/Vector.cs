@@ -92,6 +92,16 @@ namespace graphic_exercise.RenderData
         {
             return new Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
         }
+        /// <summary>
+        /// 向量乘法
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="a"></param>
+        /// <returns></returns>
+        public static Vector operator *(Vector v1,float a)
+        {
+            return new Vector(v1.x * a, v1.y * a, v1.z * a);
+        }
 
         /// <summary>
         /// 点乘

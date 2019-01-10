@@ -1,6 +1,7 @@
 ﻿using graphic_exercise.RenderData;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ namespace graphic_exercise.Util
             {
                 t = 1;
             }
-            Color c = new Color();
+            graphic_exercise.RenderData.Color c = new graphic_exercise.RenderData.Color();
             c.r = t * c2.r + (1 - t) * c1.r;
             c.g = t * c2.g + (1 - t) * c1.g;
             c.b = t * c2.b + (1 - t) * c1.b;
@@ -72,6 +73,14 @@ namespace graphic_exercise.Util
             v.lightColor =lerp(v1.lightColor, v2.lightColor, t);
             //插值矫正系数
             v.onePerZ = lerp(v1.onePerZ, v2.onePerZ, t);
+        }
+        /// <summary>
+        /// 求两者之间的距离
+        /// </summary>
+        /// <returns></returns>
+        public static float distance(float x1,float y1,float x2,float y2)
+        {
+            return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
         }
     }
 }
