@@ -67,24 +67,24 @@ namespace graphic_exercise.Test
                                          };
         //法线
         public static Vector[] norlmas = {
-                                                //前
-                                                new Vector( 0, 0, -1), new Vector(0, 0, -1), new Vector( 0, 0, -1),
-                                               new Vector(0, 0, -1), new Vector( 0, 0, -1), new Vector( 0, 0, -1),
-                                               //后
-                                                new Vector( 0, 0, 1), new Vector( 0, 0, 1), new Vector( 0, 0, 1),
-                                               new Vector( 0, 0, 1), new Vector( 0, 0, 1), new Vector( 0, 0, 1),
-                                               //左
-                                                new Vector( -1, 0, 0), new Vector( -1, 0, 0), new Vector( -1, 0, 0),
-                                               new Vector( -1, 0, 0), new Vector(-1, 0, 0), new Vector( -1, 0, 0),
-                                               //上
-                                                new Vector( 0, 1, 0), new Vector( 0, 1, 0), new Vector( 0, 1, 0),
-                                               new Vector( 0, 1, 0 ), new Vector(0, 1, 0), new Vector( 0, 1, 0),
-                                                //下
-                                                new Vector( 0, -1, 0), new Vector(  0, -1, 0), new Vector(  0, -1, 0),
-                                               new Vector(  0, -1, 0), new Vector( 0, -1, 0), new Vector( 0, -1, 0),
-                                                //右
-                                               new Vector( 1, 0, 0), new Vector( 1, 0, 0), new Vector( 1, 0, 0),
-                                               new Vector( 1, 0, 0), new Vector( 1, 0, 0), new Vector( 1, 0, 0),
+                                                //前032 021
+                                                new Vector(-0.5773503f,0.5773503f,-0.5773503f),new Vector(0.5773503f,0.5773503f,-0.5773503f), new Vector(0.5773503f,-0.5773503f,-0.5773503f),
+                                                new Vector(-0.5773503f,0.5773503f,-0.5773503f), new Vector(0.5773503f,-0.5773503f,-0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f),
+                                               //后 745 756
+                                                new Vector(0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f),
+                                               new Vector(0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f), new Vector(0.5773503f,-0.5773503f,0.5773503f),
+                                               //左401 415
+                                                new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,0.5773503f,-0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f),
+                                              new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f),
+                                               //上 473 430
+                                                new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,0.5773503f,-0.5773503f),
+                                              new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,0.5773503f,-0.5773503f), new Vector(-0.5773503f,0.5773503f,-0.5773503f),
+                                                //下 651 612
+                                                new Vector(0.5773503f,-0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f),
+                                               new Vector(0.5773503f,-0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f), new Vector(0.5773503f,-0.5773503f,-0.5773503f),
+                                                //右 376 362
+                                               new Vector(0.5773503f,0.5773503f,-0.5773503f),  new Vector(0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,-0.5773503f,0.5773503f),
+                                               new Vector(0.5773503f,0.5773503f,-0.5773503f),new Vector(0.5773503f,-0.5773503f,0.5773503f), new Vector(0.5773503f,-0.5773503f,-0.5773503f),
                                             };
 
         //顶点颜色
@@ -106,12 +106,9 @@ namespace graphic_exercise.Test
                                                //
                                                 new Color( 0, 1, 0,1), new Color( 0, 0, 1,1), new Color( 1, 0, 0,1),
                                                new Color( 0, 1, 0,1), new Color( 1, 0, 0,1), new Color( 0, 0, 1,1)
-
-
-
                                          };
 
         //材质
-        public static Material mat = new Material(new Color(0.1f, 0, 0f, 1), new Color(1f, 1, 1f, 1), new Color(0, 1,1, 1), 50);
+        public static Material mat = new Material(new Color(0.1f, 0.1f,0.1f, 1), new Color(1f, 1, 1f, 1), new Color(1, 1,1, 1), 99);
     }
 }

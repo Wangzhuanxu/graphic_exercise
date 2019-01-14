@@ -30,6 +30,7 @@ namespace graphic_exercise
         LightMode lightMode;//是否启用光照
         RenderMode renderMode;//渲染模式,线框还是实体
         FaceCullMode faceCullMode;//是否启用背面剪裁
+        WuXiaoLinLine xiaoLinLine;//吴小林抗锯齿
         Bitmap texture;//图片
         const int imgWidth = 256;//图片宽高
         const int imgHeight = 256;
@@ -48,6 +49,10 @@ namespace graphic_exercise
         [DllImport("kernel32.dll")]
         public static extern Boolean FreeConsole();
 
+        Button BLightSwitch= new Button();//灯开关
+        Button BRenderMode = new Button();//渲染模式
+        Button BFaceCullMode = new Button();//剪裁
+        Button BWuXiaoLinLine = new Button();//抗锯齿
 
         public Form1()
         {
@@ -72,13 +77,15 @@ namespace graphic_exercise
             //初始化深度缓冲
             zbuffer = new float[width, height];
             //初始化灯光
-            light = new Light(new Vector(-1, 1, -1), graphic_exercise.RenderData.Color.White);
+            light = new Light(new Vector(-5, 5, -1), graphic_exercise.RenderData.Color.White);
             //是否启用光照
             lightMode = LightMode.ON;
             //设置渲染模式
-            renderMode = RenderMode.Entity;
+            renderMode = RenderMode.Wireframe;
             //开启背面剪裁
             faceCullMode = FaceCullMode.ON;
+            //吴小林抗锯齿画线
+            xiaoLinLine = WuXiaoLinLine.OFF;
             //初始化纹理
             System.Drawing.Image img = System.Drawing.Image.FromFile("../../Texture/fireFox.png");
             texture = new Bitmap(img, imgWidth, imgHeight);
@@ -86,7 +93,6 @@ namespace graphic_exercise
 
 #if DEBUG
             Console.WriteLine(" this.Width / (float)this.Height=" + this.Width / (float)this.Height);
-         
 #endif
 
 
@@ -100,11 +106,29 @@ namespace graphic_exercise
             this.MouseDown += mouseDown;
             this.MouseUp += mouseUp;
 
+            ///winform按钮
+            this.Controls.Add(BLightSwitch);
+            BLightSwitch.SetBounds(5, 5, 40, 20);
+            BLightSwitch.Text = "关灯";
+            BLightSwitch.Click += b_Light;
 
+            this.Controls.Add(BRenderMode);
+            BRenderMode.SetBounds(5, 30, 40, 20);
+            BRenderMode.Text = "线框";
+            BRenderMode.Click += b_Render;
 
+            this.Controls.Add(BFaceCullMode);
+            BFaceCullMode.SetBounds(5, 55, 60, 20);
+            BFaceCullMode.Text = "消隐";
+            BFaceCullMode.Click += b_Cull;
 
-
-
+            this.Controls.Add(BWuXiaoLinLine);
+            BWuXiaoLinLine.SetBounds(5, 80, 60, 20);
+            BWuXiaoLinLine.Text = "锯齿";
+            BWuXiaoLinLine.Click += b_Wu;
+       
+            
+            
 
 
             // 测试数据
@@ -236,15 +260,17 @@ namespace graphic_exercise
             {
                 return;
             }
-
             ///摄像机到裁剪空间
             cameraToProject(p, v1);
             cameraToProject(p, v2);
             cameraToProject(p, v3);
 
 
-            //TODO 裁剪算法
-
+            //TODO 简单剔除
+            if(clip(v1)==false&&clip(v2)==false&&clip(v3)==false)
+            {
+                return;
+            }
 
             ///透视除法
             projectToScreen(v1);
@@ -257,14 +283,24 @@ namespace graphic_exercise
             //           v3.pos.x + "   " + v3.pos.y + "    "
             //          + v1.color.r + "  " + v1.color.g + " " + v1.color.b);
 #endif
-            if(renderMode==RenderMode.Wireframe)
+            if (renderMode == RenderMode.Wireframe)
             {
                 //画线框
-                BresenhamDrawLine(v1, v2);
-                BresenhamDrawLine(v2, v3);
-                BresenhamDrawLine(v3, v1);
+                if(xiaoLinLine==WuXiaoLinLine.OFF)
+                {
+                    BresenhamDrawLine(v1, v2);
+                    BresenhamDrawLine(v2, v3);
+                    BresenhamDrawLine(v3, v1);
+                }
+                else
+                {
+                    WuXiaoLinDrawLine(v1, v2);
+                    WuXiaoLinDrawLine(v2, v3);
+                    WuXiaoLinDrawLine(v3, v1);
+                }
+                
             }
-            else if(renderMode==RenderMode.Entity)
+            else if (renderMode == RenderMode.Entity)
             {
                 //光栅化
                 rasterizationTriangle(v1, v2, v3);
@@ -301,11 +337,17 @@ namespace graphic_exercise
         {
             vv.pos = m * vv.pos;
         }
-        //TODO 裁剪方法
-        //public bool clip(Vertex v)
-        //{
-        //    if()
-        //}
+        //TODO 三角形提出操作
+        private bool clip(Vertex v)
+        {
+            if (v.pos.x>=-v.pos.w&&v.pos.x<=v.pos.w
+                && v.pos.y >= -v.pos.w && v.pos.y <= v.pos.w
+                && v.pos.z >= -v.pos.w && v.pos.z <= v.pos.w)
+            {
+                return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// 透视除法
@@ -373,8 +415,8 @@ namespace graphic_exercise
                 int error = dy2 - dx;
                 for (int i = 0; i < dx; i++)
                 {
-                    if(x>=0&&y>=0&&x<=width&&y<=height)
-                    frameBuff.SetPixel(x, y, System.Drawing.Color.White);
+                    if (x >= 0 && y >= 0 && x < width && y < height)
+                        frameBuff.SetPixel(x, y, System.Drawing.Color.White);
                     if (error >= 0)
                     {
                         error -= dx2;
@@ -388,9 +430,9 @@ namespace graphic_exercise
             else
             {
                 int error = dx2 - dy;
-                for (int i = 0; i <dy; i++)
+                for (int i = 0; i < dy; i++)
                 {
-                    if (x >= 0 && y >= 0 && x <= width && y <= height)
+                    if (x >= 0 && y >= 0 && x < width && y < height)
                         frameBuff.SetPixel(x, y, System.Drawing.Color.White);
                     if (error >= 0)
                     {
@@ -404,6 +446,157 @@ namespace graphic_exercise
             }
 
         }
+
+        /// <summary>
+        /// 吴小林抗锯齿画线，线条有颜色
+        /// 图形程序开发人员指南
+        /// 基本思想：画该条线上下方两个像素点，这两个像素点的颜色值的亮度和为1
+        /// </summary>
+        private void WuXiaoLinDrawLine(Vertex p1, Vertex p2)
+        {
+            //绘制起始点的x y坐标
+            int x = (int)(System.Math.Round(p1.pos.x, MidpointRounding.AwayFromZero));
+            int y = (int)(System.Math.Round(p1.pos.y, MidpointRounding.AwayFromZero));
+            //用于求斜率
+            int dx = (int)(System.Math.Round(p2.pos.x - p1.pos.x, MidpointRounding.AwayFromZero));
+            int dy = (int)(System.Math.Round(p2.pos.y - p1.pos.y, MidpointRounding.AwayFromZero));
+            //移动步长
+            int stepx = 1;
+            int stepy = 1;
+            //绘制距离
+            int xlength = dx;
+            int ylength = dy;
+            //求w缓冲系数
+            float w = 0;
+            //插值因子
+            float t = 0;
+            //最终颜色
+            graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1, 1, 1, 1);
+
+            if (dx >= 0)
+            {
+                stepx = 1;
+            }
+            else
+            {
+                stepx = -1;
+                xlength = System.Math.Abs(dx);
+            }
+
+            if (dy >= 0)
+            {
+                stepy = 1;
+            }
+            else
+            {
+                stepy = -1;
+                ylength = System.Math.Abs(dy);
+            }
+            //起始x,y值
+            int a;
+            int b;
+            if (xlength > ylength)
+            {
+                //斜率
+                float k = 0;
+                if (dx != 0)
+                    k = dy / (float)dx;
+                float error = k;
+                //抗锯齿的插值因子
+                float e = 1;
+
+                int max = xlength;
+                if (max == 0)
+                {
+                    max = int.MaxValue;
+                }
+                for (int i = 0; i <=xlength; i += 1)
+                {
+                    a = x;
+                    b = y;
+                    //w缓冲
+                    t = i / (float)max;
+                    if (a >= 0 && b >= 0 && a < width && b < height)
+                    {
+                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                        //光照颜色
+                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                        //颜色和光照混合
+                        finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                        e = Math.Abs(error);
+                        frameBuff.SetPixel(a, b,/* new graphic_exercise.RenderData.Color(1-e, 1-e, 1-e, 1)*/(finalColor*(1-e)).TransFormToSystemColor());
+                        b = b + stepy;
+                        if (b >= 0 && b < height)
+                        {
+                            frameBuff.SetPixel(a, b, /*new graphic_exercise.RenderData.Color(e,  e,  e, 1)*/(finalColor*e).TransFormToSystemColor());
+                        }
+                    }
+                    x += stepx;
+                    error += k * stepx;
+                    if (error > 1)
+                    {
+                        error -= 1;
+                        y += stepy;
+
+                    }
+                    else if (error < -1)
+                    {
+                        error += 1;
+                        y += stepy;
+
+                    }
+
+                }
+            }
+            else
+            {
+                float k = 0;
+                if (dy != 0)
+                    k = dx / (float)dy;
+                float error = k;
+                float e=1;
+
+                int max = ylength;
+                if (max == 0)
+                {
+                    max = int.MaxValue;
+                }
+                for (int i = 0; i <= ylength; i++)
+                {
+                    a = x;
+                    b = y;
+                    //w缓冲
+                    t = i / (float)max;
+                    if (a >= 0 && b >= 0 && a < width && b < height)
+                    {
+                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                        //光照颜色
+                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                        //颜色和光照混合
+                        finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                        e = Math.Abs(error);
+                        frameBuff.SetPixel(a, b, (finalColor * (1 - e)).TransFormToSystemColor());
+                        a = x + stepx;
+                        if (a >= 0 && a < width)
+                            frameBuff.SetPixel(a, b, (finalColor *  e).TransFormToSystemColor());
+                    }
+                    error += k * stepy;
+                    y += stepy;
+                    if (error > 1)
+                    {
+                        error -= 1;
+                        x += stepx;
+                    }
+                    else if (error < -1)
+                    {
+                        error += 1;
+                        x += stepx;
+                    }
+                }
+            }
+
+        }
+
         /// <summary>
         /// 光栅化三角形
         /// </summary>
@@ -657,12 +850,21 @@ namespace graphic_exercise
             //uv坐标
             int u = 0;
             int v = 0;
+
+            int max = dx;
+            if(max==0)
+            {
+                max = int.MaxValue;
+            }
+
+
             for (int i = 0; i <= dx; i +=1)
             {
-                if (dx != 0)
-                {
-                    t = i /(float)dx;
-                }
+                //if (dx != 0)
+                //{
+                //    t = i /(float)dx;
+                //}
+                t = i / (float)max;
                 int xIndex = x;// (int)Math.Ceiling(x);
                 //int xIndex = (int)(System.Math.Round(x, MidpointRounding.AwayFromZero));
                 if (xIndex >= 0 && xIndex <width)
@@ -685,13 +887,17 @@ namespace graphic_exercise
                         graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1,1,1,1);
                         if (lightMode == LightMode.ON)
                         {
-                            finalColor = Util.Util.lerp(left.lightColor, right.lightColor, t)*w;
-                            texColor = new RenderData.Color(tex(u, v));
-                            finalColor = texColor * finalColor;
+                            
+                            //光照颜色
+                            finalColor = Util.Util.lerp(left.lightColor, right.lightColor, t) * w;
+                            //颜色和光照混合
+                            finalColor = Util.Util.lerp(left.color, right.color, t) * w * finalColor;
                         }
                         else
                         {
-                            finalColor = Util.Util.lerp(left.color, right.color, t)*w;
+                            ////纹理颜色
+                            texColor = new RenderData.Color(tex(u, v));
+                            finalColor = texColor;
                         }
                         frameBuff.SetPixel(xIndex, yIndex, finalColor.TransFormToSystemColor());
                     }
@@ -754,6 +960,7 @@ namespace graphic_exercise
 #endif
             //顶点颜色
             v1.lightColor = ambient + diffuse + specular;
+            //Console.WriteLine(diffuse.r + "  " + diffuse.g + "  " + diffuse.b + "  " + diffuse.a);
         }
         /// <summary>
         /// 背面消隐，裁剪摄像机不可见的面,加快渲染效率,顺序必须是逆时针顺序
@@ -790,12 +997,6 @@ namespace graphic_exercise
 
 
 
-
-
-
-
-
-
         #region 刷帧线程方法
 
         Graphics g = null;
@@ -822,13 +1023,13 @@ namespace graphic_exercise
             while (true)
             {
                 triangleNum = 0;
-                lastTime = DateTime.Now;
                 //清除颜色缓存
                 clearBuff();
                 //求mvp矩阵
                  m= Matrix4x4.translate(0, 0, tranZ) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
                  v= Matrix4x4.view(camera.look, camera.up, camera.pos);
                  p= Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
+                lastTime = DateTime.Now;
                 //绘制
                 draw(m, v, p);
                 
@@ -839,7 +1040,7 @@ namespace graphic_exercise
                 g.DrawImage(frameBuff, 0, 0);
                 now = DateTime.Now;
                 timeSpan = now - lastTime;
-                this.Text ="帧率："+(int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds)+ "         绘制的三角形个数:"+triangleNum;
+                this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) + "         绘制的三角形个数:" + triangleNum;
                 lastTime = now;
             }
 
@@ -859,17 +1060,19 @@ namespace graphic_exercise
             //Matrix4x4 v = Matrix4x4.view(camera.look, camera.up, camera.pos);
             //Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
             ////绘制
-            //print(m, v, p);
+            //// print(m, v, p);
             //draw(m, v, p);
+            //now = DateTime.Now;
+            //timeSpan = now - lastTime;
+            //this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) + "         绘制的三角形个数:" + triangleNum + "    " + timeSpan.TotalMilliseconds;
+            //lastTime = now;
             //if (g == null)
             //{
             //    g = this.CreateGraphics();
             //}
             //g.DrawImage(frameBuff, 0, 0);
-            //now = DateTime.Now;
-            //timeSpan = now - lastTime;
-            //this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) + "         绘制的三角形个数:" + triangleNum;
-            //lastTime = now;
+
+
         }
 
         #endregion
@@ -979,38 +1182,95 @@ namespace graphic_exercise
                 camera.pos.y -= 0.1f;
                 Console.WriteLine("下降");
             }
-            else if(keyData==Keys.Z)
-            {
-                lightMode = LightMode.ON;
-                Console.WriteLine("开灯");
-            }
-            else if(keyData==Keys.X)
-            {
-                lightMode = LightMode.OFF;
-                Console.WriteLine("关灯");
-            }
-            else if(keyData==Keys.C)
-            {
-                renderMode = RenderMode.Wireframe;
-                Console.WriteLine("画线框");
-            }
-            else if(keyData==Keys.V)
-            {
-                renderMode = RenderMode.Entity;
-                Console.WriteLine("画实体");
-            }
-            else if(keyData==Keys.B)
-            {
-                faceCullMode = FaceCullMode.ON;
-                Console.WriteLine("开启背面剪裁");
-            }
-            else if (keyData == Keys.N)
-            {
-                faceCullMode = FaceCullMode.OFF;
-                Console.WriteLine("关闭背面剪裁");
-            }
+            //else if(keyData==Keys.Z)
+            //{
+            //    lightMode = LightMode.ON;
+            //    Console.WriteLine("开灯");
+            //}
+            //else if(keyData==Keys.X)
+            //{
+            //    lightMode = LightMode.OFF;
+            //    Console.WriteLine("关灯");
+            //}
+            //else if(keyData==Keys.C)
+            //{
+            //    renderMode = RenderMode.Wireframe;
+            //    Console.WriteLine("画线框");
+            //}
+            //else if(keyData==Keys.V)
+            //{
+            //    renderMode = RenderMode.Entity;
+            //    Console.WriteLine("画实体");
+            //}
+            //else if(keyData==Keys.B)
+            //{
+            //    faceCullMode = FaceCullMode.ON;
+            //    Console.WriteLine("开启背面剪裁");
+            //}
+            //else if (keyData == Keys.N)
+            //{
+            //    faceCullMode = FaceCullMode.OFF;
+            //    Console.WriteLine("关闭背面剪裁");
+            //}
             return true;
         }
+
+        public void b_Light(object sender, EventArgs e)
+        {
+            if(lightMode==LightMode.ON)
+            {
+                lightMode = LightMode.OFF;
+                BLightSwitch.Text = "关灯";
+            }
+            else if(lightMode==LightMode.OFF)
+            {
+                lightMode = LightMode.ON;
+                BLightSwitch.Text = "开灯";
+            }
+        }
+
+        public void b_Render(object sender, EventArgs e)
+        {
+            if (renderMode == RenderMode.Entity)
+            {
+                renderMode = RenderMode.Wireframe;
+                BRenderMode.Text = "线框";
+            }
+            else if (renderMode == RenderMode.Wireframe)
+            {
+                renderMode = RenderMode.Entity;
+                BRenderMode.Text = "实体";
+            }
+        }
+
+        public void b_Cull(object sender, EventArgs e)
+        {
+            if (faceCullMode == FaceCullMode.ON)
+            {
+                faceCullMode = FaceCullMode.OFF;
+                BFaceCullMode.Text = "不消隐";
+            }
+            else if (faceCullMode == FaceCullMode.OFF)
+            {
+                faceCullMode = FaceCullMode.ON;
+                BFaceCullMode.Text = "消隐";
+            }
+        }
+
+        public void b_Wu(object sender, EventArgs e)
+        {
+            if (xiaoLinLine == WuXiaoLinLine.ON)
+            {
+                xiaoLinLine = WuXiaoLinLine.OFF;
+                BWuXiaoLinLine.Text = "锯齿";
+            }
+            else if (xiaoLinLine == WuXiaoLinLine.OFF)
+            {
+                xiaoLinLine = WuXiaoLinLine.ON;
+                BWuXiaoLinLine.Text = "抗锯齿";
+            }
+        }
+
         #endregion
     }
 }

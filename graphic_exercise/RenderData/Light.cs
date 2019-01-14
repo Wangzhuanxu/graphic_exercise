@@ -47,4 +47,12 @@ namespace graphic_exercise.RenderData
         ON,
         OFF
     }
+    /// <summary>
+    /// 吴小林反走样算法
+    /// </summary>
+    enum WuXiaoLinLine
+    {
+        ON,
+        OFF
+    }
 }
