@@ -55,4 +55,18 @@ namespace graphic_exercise.RenderData
         ON,
         OFF
     }
+    /// <summary>
+    /// 视锥体剪裁
+    /// </summary>
+    enum ClipTest
+    {
+        ON,
+        OFF
+    }
+
+    enum TextColor
+    {
+        ON,
+        OFF
+    }
 }

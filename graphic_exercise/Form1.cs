@@ -31,6 +31,8 @@ namespace graphic_exercise
         RenderMode renderMode;//渲染模式,线框还是实体
         FaceCullMode faceCullMode;//是否启用背面剪裁
         WuXiaoLinLine xiaoLinLine;//吴小林抗锯齿
+        ClipTest clipTest;//视锥体剪裁
+        TextColor textColors;//纹理采样
         Bitmap texture;//图片
         const int imgWidth = 256;//图片宽高
         const int imgHeight = 256;
@@ -53,7 +55,8 @@ namespace graphic_exercise
         Button BRenderMode = new Button();//渲染模式
         Button BFaceCullMode = new Button();//剪裁
         Button BWuXiaoLinLine = new Button();//抗锯齿
-
+        Button BClipTest = new Button();//视锥体剪裁
+        Button BTextColor = new Button();//纹理采样
         public Form1()
         {
 
@@ -73,7 +76,7 @@ namespace graphic_exercise
             triangles = new Triangle(CubeTestDatacs.pointList, CubeTestDatacs.indexs, CubeTestDatacs.uvs, CubeTestDatacs.norlmas, CubeTestDatacs.vertColors,CubeTestDatacs.mat);
             //triangles = new Triangle(TriangleTestData.pointList, TriangleTestData.indexs, TriangleTestData.uvs, TriangleTestData.norlmas, TriangleTestData.vertColors,TriangleTestData.mat);
             //初始化摄像机 Vector look,Vector up,Vector pos,float fov,float aspect,float near,float far
-            camera = new Camera(new Vector(0, 0, 10, 1), new Vector(0, 1, 0, 0), new Vector(0,2,5, 1), (float)System.Math.PI / 3f,this.Width / (float)this.Height, 1f, 1000f);
+            camera = new Camera(new Vector(0, 0, 10, 1), new Vector(0, 1, 0, 0), new Vector(0,2,5, 1), (float)System.Math.PI / 3f,this.Width / (float)this.Height, 5f, 8f);
             //初始化深度缓冲
             zbuffer = new float[width, height];
             //初始化灯光
@@ -86,6 +89,10 @@ namespace graphic_exercise
             faceCullMode = FaceCullMode.ON;
             //吴小林抗锯齿画线
             xiaoLinLine = WuXiaoLinLine.OFF;
+            //视锥体剪裁
+            clipTest = ClipTest.ON;
+            //纹理采样
+            textColors = TextColor.OFF;
             //初始化纹理
             System.Drawing.Image img = System.Drawing.Image.FromFile("../../Texture/fireFox.png");
             texture = new Bitmap(img, imgWidth, imgHeight);
@@ -107,10 +114,10 @@ namespace graphic_exercise
             this.MouseUp += mouseUp;
 
             ///winform按钮
-            this.Controls.Add(BLightSwitch);
-            BLightSwitch.SetBounds(5, 5, 40, 20);
-            BLightSwitch.Text = "关灯";
-            BLightSwitch.Click += b_Light;
+            //this.Controls.Add(BLightSwitch);
+            //BLightSwitch.SetBounds(5, 5, 40, 20);
+            //BLightSwitch.Text = "关灯";
+            //BLightSwitch.Click += b_Light;
 
             this.Controls.Add(BRenderMode);
             BRenderMode.SetBounds(5, 30, 40, 20);
@@ -126,9 +133,16 @@ namespace graphic_exercise
             BWuXiaoLinLine.SetBounds(5, 80, 60, 20);
             BWuXiaoLinLine.Text = "锯齿";
             BWuXiaoLinLine.Click += b_Wu;
-       
-            
-            
+
+            this.Controls.Add(BClipTest);
+            BClipTest.SetBounds(5, 105, 60, 20);
+            BClipTest.Text = "剪裁";
+            BClipTest.Click += b_Clip;
+
+            this.Controls.Add(BTextColor);
+            BTextColor.SetBounds(5, 130, 40, 20);
+            BTextColor.Text = "颜色";
+            BTextColor.Click += b_TextColor;
 
 
             // 测试数据
@@ -242,13 +256,10 @@ namespace graphic_exercise
             //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
             //           v3.pos.x + "   " + v3.pos.y + "    ");
 #endif
-            //顶点光照,在世界坐标系下进行
-            if(lightMode==LightMode.ON)
-            {
-                vertexLighting(v1, m);
-                vertexLighting(v2, m);
-                vertexLighting(v3, m);
-            }
+            //顶点光照,在世界坐标系下进
+            vertexLighting(v1, m);
+            vertexLighting(v2, m);
+            vertexLighting(v3, m);
            
             ///世界到摄像机空间
             worldToCamera(v, v1);
@@ -265,28 +276,74 @@ namespace graphic_exercise
             cameraToProject(p, v2);
             cameraToProject(p, v3);
 
-
             //TODO 简单剔除
-            if(clip(v1)==false&&clip(v2)==false&&clip(v3)==false)
+            if (clip(v1)==false&&clip(v2)==false&&clip(v3)==false)
             {
                 return;
             }
+
+            //剪裁
+            if (clipTest == ClipTest.ON)
+            {
+                clipTest_near(v1, v2, v3);
+            }
+            else
+            {
+                drawTriangle2(v1, v2, v3);
+            }
+
+
+         
+            
+#if DEBUG
+                //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
+                //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
+                //           v3.pos.x + "   " + v3.pos.y + "    "
+                //          + v1.color.r + "  " + v1.color.g + " " + v1.color.b);
+#endif
+            //if (renderMode == RenderMode.Wireframe)
+            //{
+            //    //画线框
+            //    if(xiaoLinLine==WuXiaoLinLine.OFF)
+            //    {
+            //        BresenhamDrawLine(v1, v2);
+            //        BresenhamDrawLine(v2, v3);
+            //        BresenhamDrawLine(v3, v1);
+            //    }
+            //    else
+            //    {
+            //        WuXiaoLinDrawLine(v1, v2);
+            //        WuXiaoLinDrawLine(v2, v3);
+            //        WuXiaoLinDrawLine(v3, v1);
+            //    }
+                
+            //}
+            //else if (renderMode == RenderMode.Entity)
+            //{
+            //    //光栅化
+            //    rasterizationTriangle(v1, v2, v3);
+            //}
+#if DEBUG
+            //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
+            //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
+            //           v3.pos.x + "   " + v3.pos.y + "    ");
+#endif
+        }
+        /// <summary>
+        /// 不包含剪裁
+        /// </summary>
+        private void drawTriangle2(Vertex v1,Vertex v2,Vertex v3)
+        {
 
             ///透视除法
             projectToScreen(v1);
             projectToScreen(v2);
             projectToScreen(v3);
 
-#if DEBUG
-            //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
-            //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
-            //           v3.pos.x + "   " + v3.pos.y + "    "
-            //          + v1.color.r + "  " + v1.color.g + " " + v1.color.b);
-#endif
             if (renderMode == RenderMode.Wireframe)
             {
                 //画线框
-                if(xiaoLinLine==WuXiaoLinLine.OFF)
+                if (xiaoLinLine == WuXiaoLinLine.OFF)
                 {
                     BresenhamDrawLine(v1, v2);
                     BresenhamDrawLine(v2, v3);
@@ -298,20 +355,15 @@ namespace graphic_exercise
                     WuXiaoLinDrawLine(v2, v3);
                     WuXiaoLinDrawLine(v3, v1);
                 }
-                
+
             }
             else if (renderMode == RenderMode.Entity)
             {
                 //光栅化
                 rasterizationTriangle(v1, v2, v3);
             }
-#if DEBUG
-            //Console.WriteLine(v1.pos.x + "   " + v1.pos.y + "    " + " "
-            //           + v2.pos.x + "   " + v2.pos.y + "    " + " " +
-            //           v3.pos.x + "   " + v3.pos.y + "    ");
-#endif
-
         }
+
         /// <summary>
         /// 本地到世界坐标系
         /// </summary>
@@ -337,7 +389,7 @@ namespace graphic_exercise
         {
             vv.pos = m * vv.pos;
         }
-        //TODO 三角形提出操作
+        //TODO 三角形剔除操作
         private bool clip(Vertex v)
         {
             if (v.pos.x>=-v.pos.w&&v.pos.x<=v.pos.w
@@ -347,6 +399,339 @@ namespace graphic_exercise
                 return true;
             }
             return false;
+        }
+        /// <summary>
+        /// 近平面裁剪
+        /// </summary>
+        private void clipTest_near(Vertex v1, Vertex v2, Vertex v3)
+        {
+            //指向立方体内部
+            Vector near_n = new Vector(0, 0, 1);
+            float distance = -camera.near;
+            //插值因子
+            float t = 0;
+            //点在法线上的投影
+            float projectV1 = Vector.dot(near_n, v1.pos);
+            float projectV2 = Vector.dot(near_n, v2.pos);
+            float projectV3 = Vector.dot(near_n, v3.pos);
+            //点与点之间的距离
+            float dv1v2 = Math.Abs(projectV1 - projectV2);
+            float dv1v3 = Math.Abs(projectV1 - projectV3);
+            float dv2v3 = Math.Abs(projectV2 - projectV3);
+            //点倒平面的距离
+            float pv1 = Math.Abs(projectV1 - distance);
+            float pv2 = Math.Abs(projectV2 - distance);
+            float pv3 = Math.Abs(projectV3 - distance);
+            t = pv2 / dv2v3;
+            //v1,v2,v3都在立方体内
+            if (projectV1 > distance && projectV2 > distance && projectV3 > distance)
+            {
+                //不做任何处理
+                //drawTriangle2(v1, v2, v3);
+                clipTest_far(v1, v2, v3);
+            }
+            else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在外
+            {
+                Vertex temp2 = new Vertex();
+                t = pv2 / dv1v2;
+                temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
+                temp2.pos.z = distance;
+                temp2.pos.w = -distance;
+                Util.Util.lerp(temp2, v2, v1, t);
+
+                Vertex temp1 = new Vertex();
+                t = pv3 / dv1v3;
+                temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
+                temp1.pos.z = distance;;
+                temp1.pos.w = -distance; ;
+                Util.Util.lerp(temp1, v3, v1, t);
+                //画线或光栅化
+                Vertex temp3 = new Vertex();
+                Vertex temp4 = new Vertex();
+                Vertex.Clone(v2, temp3);
+                Vertex.Clone(temp1, temp4);
+                clipTest_far(temp1, temp2, v2);
+                clipTest_far(temp4, temp3, v3);
+            }
+            else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在外
+            {
+                Vertex temp1 = new Vertex();
+                t = pv1 / dv1v2;
+                temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
+                temp1.pos.z = distance;;
+                temp1.pos.w = -distance; ;
+                Util.Util.lerp(temp1, v1, v2, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv3 / dv2v3;
+                temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
+                temp2.pos.z = distance;;
+                temp2.pos.w = -distance; ;
+                Util.Util.lerp(temp2, v3, v2, t);
+                //画线或光栅化
+                Vertex temp3 = new Vertex();
+                Vertex temp4 = new Vertex();
+                Vertex.Clone(v3, temp3);
+                Vertex.Clone(temp1, temp4);
+                clipTest_far(temp1, temp2, v3);
+                clipTest_far(temp4, temp3, v1);
+            }
+            else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在外
+            {
+                Vertex temp1 = new Vertex();
+                t = pv2 / dv2v3;
+                temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
+                temp1.pos.z = distance;;
+                temp1.pos.w = -distance; ;
+                Util.Util.lerp(temp1, v2, v3, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv1 / dv1v3;
+                temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
+                temp2.pos.z = distance;;
+                temp2.pos.w = -distance; ;
+                Util.Util.lerp(temp2, v1, v3, t);
+                //画线或光栅化
+                Vertex temp3 = new Vertex();
+                Vertex temp4 = new Vertex();
+                Vertex.Clone(v1, temp3);
+                Vertex.Clone(temp1, temp4);
+                clipTest_far(temp1, temp2, v1);
+                clipTest_far(temp4, temp3, v2);
+            }
+
+            else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在内
+            {
+                Vertex temp1 = new Vertex();
+                t = pv1 / dv1v2;
+                temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
+                temp1.pos.z = distance;;
+                temp1.pos.w = -distance; ;
+                Util.Util.lerp(temp1, v1, v2, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv1 / dv1v3;
+                temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
+                temp2.pos.z = distance;;
+                temp2.pos.w = -distance; ;
+                Util.Util.lerp(temp2, v1, v3, t);
+                //画线或光栅化
+                clipTest_far(temp1, temp2, v1);
+            }
+            else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在内
+            {
+                Vertex temp1 = new Vertex();
+                t = pv2 / dv2v3;
+                temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
+                temp1.pos.z = distance;;
+                temp1.pos.w = -distance; ;
+                Util.Util.lerp(temp1, v2, v3, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv2 / dv1v2;
+                temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
+                temp2.pos.z = distance;;
+                temp2.pos.w = -distance; ;
+                Util.Util.lerp(temp2, v2, v1, t);
+                //画线或光栅化
+                clipTest_far(temp1, temp2, v2);
+            }
+            else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在内
+            {
+                Vertex temp1 = new Vertex();
+                t = pv3 / dv1v3;
+                temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
+                temp1.pos.z = distance;;
+                temp1.pos.w = -distance; ;
+                Util.Util.lerp(temp1, v3, v1, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv3 / dv2v3;
+                temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
+                temp2.pos.z = distance;;
+                temp2.pos.w = -distance; ;
+                Util.Util.lerp(temp2, v3, v2, t);
+                //画线或光栅化
+                clipTest_far(temp1, temp2, v3);
+            }
+        }
+        /// <summary>
+        /// 远剪裁平面
+        /// </summary>
+        private void clipTest_far(Vertex v1, Vertex v2, Vertex v3)
+        {
+            
+            //指向立方体内部
+            Vector far_n = new Vector(0, 0, 1);
+            float distance = camera.far;
+            //插值因子
+            float t = 0;
+            //点在法线上的投影
+            float projectV1 = Vector.dot(far_n, v1.pos);
+            float projectV2 = Vector.dot(far_n, v2.pos);
+            float projectV3 = Vector.dot(far_n, v3.pos);
+            //点与点之间的距离
+            float dv1v2 = Math.Abs(projectV1 - projectV2);
+            float dv1v3 = Math.Abs(projectV1 - projectV3);
+            float dv2v3 = Math.Abs(projectV2 - projectV3);
+            //颠倒平面的距离
+            float pv1 = Math.Abs(projectV1 - distance);
+            float pv2 = Math.Abs(projectV2 - distance);
+            float pv3 = Math.Abs(projectV3 - distance);
+            //v1,v2,v3都在立方体内
+            if (projectV1 < distance && projectV2 < distance && projectV3 < distance)
+            {
+                //不做任何处理
+                drawTriangle2(v1, v2, v3);
+            }
+            else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在外
+            {
+                Vertex temp2 = new Vertex();
+                t = pv2 / dv1v2;
+                temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
+                temp2.pos.z = distance; ;
+                temp2.pos.w = distance; ;
+                Util.Util.lerp(temp2, v2, v1, t);
+
+                Vertex temp1 = new Vertex();
+                t = pv3 / dv1v3;
+                temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
+                temp1.pos.z = distance; ;
+                temp1.pos.w = distance; ;
+                Util.Util.lerp(temp1, v3, v1, t);
+                //画线或光栅化
+                Vertex temp3 = new Vertex();
+                Vertex temp4 = new Vertex();
+                Vertex.Clone(v2, temp3);
+                Vertex.Clone(temp1, temp4);
+                drawTriangle2(temp1, temp2, v2);
+                drawTriangle2(temp4, temp3, v3);
+            }
+            else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在外
+            {
+                Vertex temp1 = new Vertex();
+                t = pv1 / dv1v2;
+                temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
+                temp1.pos.z = distance; ;
+                temp1.pos.w = distance; ;
+                Util.Util.lerp(temp1, v1, v2, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv3 / dv2v3;
+                temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
+                temp2.pos.z = distance; ;
+                temp2.pos.w = distance; ;
+                Util.Util.lerp(temp2, v3, v2, t);
+                //画线或光栅化
+                Vertex temp3 = new Vertex();
+                Vertex temp4 = new Vertex();
+                Vertex.Clone(v3, temp3);
+                Vertex.Clone(temp1, temp4);
+                drawTriangle2(temp1, temp2, v3);
+                drawTriangle2(temp4, temp3, v1);
+            }
+            else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在外
+            {
+                Vertex temp1 = new Vertex();
+                t = pv2 / dv2v3;
+                temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
+                temp1.pos.z = distance; ;
+                temp1.pos.w = distance; ;
+                Util.Util.lerp(temp1, v2, v3, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv1 / dv1v3;
+                temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
+                temp2.pos.z = distance; ;
+                temp2.pos.w = distance; ;
+                Util.Util.lerp(temp2, v1, v3, t);
+                //画线或光栅化
+                Vertex temp3 = new Vertex();
+                Vertex temp4 = new Vertex();
+                Vertex.Clone(v1, temp3);
+                Vertex.Clone(temp1, temp4);
+                drawTriangle2(temp1, temp2, v1);
+                drawTriangle2(temp4, temp3, v2);
+            }
+
+            else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在内
+            {
+                Vertex temp1 = new Vertex();
+                t = pv1 / dv1v2;
+                temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
+                temp1.pos.z = distance; ;
+                temp1.pos.w = distance; ;
+                Util.Util.lerp(temp1, v1, v2, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv1 / dv1v3;
+                temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
+                temp2.pos.z = distance; ;
+                temp2.pos.w = distance; ;
+                Util.Util.lerp(temp2, v1, v3, t);
+                //画线或光栅化
+                drawTriangle2(temp1, temp2, v1);
+            }
+            else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在内
+            {
+                Vertex temp1 = new Vertex();
+                t = pv2 / dv2v3;
+                temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
+                temp1.pos.z = distance; ;
+                temp1.pos.w = distance; ;
+                Util.Util.lerp(temp1, v2, v3, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv2 / dv1v2;
+                temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
+                temp2.pos.z = distance; ;
+                temp2.pos.w = distance; ;
+                Util.Util.lerp(temp2, v2, v1, t);
+                //画线或光栅化
+                drawTriangle2(temp1, temp2, v2);
+            }
+            else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在内
+            {
+                Vertex temp1 = new Vertex();
+                t = pv3 / dv1v3;
+                temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
+                temp1.pos.z = distance; ;
+                temp1.pos.w = distance; ;
+                Util.Util.lerp(temp1, v3, v1, t);
+
+                Vertex temp2 = new Vertex();
+                t = pv3 / dv2v3;
+                temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
+                temp2.pos.z = distance; ;
+                temp2.pos.w = distance; ;
+                Util.Util.lerp(temp2, v3, v2, t);
+                //画线或光栅化
+                drawTriangle2(temp1, temp2, v3);
+            }
         }
 
         /// <summary>
@@ -389,6 +774,13 @@ namespace graphic_exercise
             int stepx = 1;
             int stepy = 1;
 
+            //求w缓冲系数
+            float w = 0;
+            //插值因子
+            float t = 0;
+            //最终颜色
+            graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1, 1, 1, 1);
+
             if (dx >= 0)
             {
                 stepx = 1;
@@ -410,13 +802,32 @@ namespace graphic_exercise
             }
             int dx2 = 2 * dx;
             int dy2 = 2 * dy;
+         
             if (dx > dy)
             {
+                int max = dx;
+                if (max == 0)
+                {
+                    max = int.MaxValue;
+                }
                 int error = dy2 - dx;
                 for (int i = 0; i < dx; i++)
                 {
+                    //w缓冲
+                    t = i / (float)max;
+                    if (Util.Util.lerp(p1.onePerZ, p2.onePerZ, t) == 0)
+                    {
+                        w = 1;
+                    }
+                    else
+                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                    //光照颜色
+                    finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                    //颜色和光照混合
+                    finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+
                     if (x >= 0 && y >= 0 && x < width && y < height)
-                        frameBuff.SetPixel(x, y, System.Drawing.Color.White);
+                        frameBuff.SetPixel(x, y, /*System.Drawing.Color.White*/finalColor.TransFormToSystemColor());
                     if (error >= 0)
                     {
                         error -= dx2;
@@ -429,11 +840,29 @@ namespace graphic_exercise
             }
             else
             {
+                int max = dy;
+                if (max == 0)
+                {
+                    max = int.MaxValue;
+                }
                 int error = dx2 - dy;
                 for (int i = 0; i < dy; i++)
                 {
+                    //w缓冲
+                    t = i / (float)max;
+                    if (Util.Util.lerp(p1.onePerZ, p2.onePerZ, t) == 0)
+                    {
+                        w = 1;
+                    }
+                    else
+                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                    //光照颜色
+                    finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                    //颜色和光照混合
+                    finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+
                     if (x >= 0 && y >= 0 && x < width && y < height)
-                        frameBuff.SetPixel(x, y, System.Drawing.Color.White);
+                        frameBuff.SetPixel(x, y, /*System.Drawing.Color.White*/finalColor.TransFormToSystemColor());
                     if (error >= 0)
                     {
                         error -= dy2;
@@ -472,7 +901,6 @@ namespace graphic_exercise
             float t = 0;
             //最终颜色
             graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1, 1, 1, 1);
-
             if (dx >= 0)
             {
                 stepx = 1;
@@ -518,6 +946,11 @@ namespace graphic_exercise
                     t = i / (float)max;
                     if (a >= 0 && b >= 0 && a < width && b < height)
                     {
+                        if(Util.Util.lerp(p1.onePerZ, p2.onePerZ, t)==0)
+                        {
+                            w = 1;
+                        }
+                        else
                         w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
                         //光照颜色
                         finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
@@ -554,7 +987,7 @@ namespace graphic_exercise
                 if (dy != 0)
                     k = dx / (float)dy;
                 float error = k;
-                float e=1;
+                float e = 1;
 
                 int max = ylength;
                 if (max == 0)
@@ -569,8 +1002,14 @@ namespace graphic_exercise
                     t = i / (float)max;
                     if (a >= 0 && b >= 0 && a < width && b < height)
                     {
-                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
-                        //光照颜色
+                        if (Util.Util.lerp(p1.onePerZ, p2.onePerZ, t) == 0)
+                        {
+                            w = 1;
+                        }
+                        else
+                            w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+
+                        // 光照颜色
                         finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
                         //颜色和光照混合
                         finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
@@ -578,7 +1017,7 @@ namespace graphic_exercise
                         frameBuff.SetPixel(a, b, (finalColor * (1 - e)).TransFormToSystemColor());
                         a = x + stepx;
                         if (a >= 0 && a < width)
-                            frameBuff.SetPixel(a, b, (finalColor *  e).TransFormToSystemColor());
+                            frameBuff.SetPixel(a, b, (finalColor * e).TransFormToSystemColor());
                     }
                     error += k * stepy;
                     y += stepy;
@@ -719,8 +1158,7 @@ namespace graphic_exercise
             }
         }
         /// <summary>
-        /// 平底三角形
-        /// </summary>
+         /// </summary>
         private void drawTriangleBottom(Vertex v1, Vertex v2, Vertex v3)
         {
             int x1 = (int)(System.Math.Round(v1.pos.x, MidpointRounding.AwayFromZero));
@@ -854,9 +1292,8 @@ namespace graphic_exercise
             int max = dx;
             if(max==0)
             {
-                max = int.MaxValue;
+                max = 9999;
             }
-
 
             for (int i = 0; i <= dx; i +=1)
             {
@@ -864,7 +1301,10 @@ namespace graphic_exercise
                 //{
                 //    t = i /(float)dx;
                 //}
-                t = i / (float)max;
+                checked
+                {
+                    t = i / (float)max;
+                }
                 int xIndex = x;// (int)Math.Ceiling(x);
                 //int xIndex = (int)(System.Math.Round(x, MidpointRounding.AwayFromZero));
                 if (xIndex >= 0 && xIndex <width)
@@ -874,7 +1314,13 @@ namespace graphic_exercise
                     if (zbuffer[xIndex, yIndex] >= death)
                     {
                         //w缓冲
+                        if(Util.Util.lerp(left.onePerZ, right.onePerZ, t)==0)
+                        {
+                            w = 1;
+                        }
+                        else
                         w = 1 / Util.Util.lerp(left.onePerZ, right.onePerZ, t);
+                        
                         //深度值
                         zbuffer[xIndex, yIndex] = death;
                         //uv坐标
@@ -885,7 +1331,7 @@ namespace graphic_exercise
                         graphic_exercise.RenderData.Color texColor = new graphic_exercise.RenderData.Color();
                         //最终颜色
                         graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1,1,1,1);
-                        if (lightMode == LightMode.ON)
+                        if (textColors == TextColor.OFF)
                         {
                             
                             //光照颜色
@@ -964,6 +1410,7 @@ namespace graphic_exercise
         }
         /// <summary>
         /// 背面消隐，裁剪摄像机不可见的面,加快渲染效率,顺序必须是逆时针顺序
+        /// 在相机空间是因为相机在该空间的位置为0，0，0
         /// </summary>
         bool backFaceCulling(Vertex v1, Vertex v2, Vertex v3)
         {
@@ -989,13 +1436,6 @@ namespace graphic_exercise
             //夹角大于90度，说明面不可见
             return false;
         }
-
-
-
-
-
-
-
 
         #region 刷帧线程方法
 
@@ -1043,7 +1483,6 @@ namespace graphic_exercise
                 this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) + "         绘制的三角形个数:" + triangleNum;
                 lastTime = now;
             }
-
         }
         /// <summary>
         /// 刷帧测试方法
@@ -1103,7 +1542,6 @@ namespace graphic_exercise
         //旋转角度
         float rx = 0;
         float ry = 0;
-
         //能否移动
         bool canMove = false;
         /// <summary>
@@ -1135,9 +1573,6 @@ namespace graphic_exercise
                 pos = camera.pos;
                 pos = Matrix4x4.translate(camera.look.x, camera.look.y, camera.look.z) * Matrix4x4.rotateY(ry) * Matrix4x4.rotateX(rx) * Matrix4x4.translate(-camera.look.x, -camera.look.y, -camera.look.z) * pos;
                 camera.pos = pos;
-#if DEBUG
-                //Console.WriteLine(Util.Util.distance(e.X, 0, lastPoint.X, 0)+"  "+(ry) +  " "+canMove);
-#endif
                 lastPoint.X = e.Location.X;
                 lastPoint.Y = e.Location.Y;
             }
@@ -1146,7 +1581,6 @@ namespace graphic_exercise
         {
             canMove = false;
         }
-
         /// <summary>
         /// 键盘事件监听
         /// </summary>
@@ -1182,36 +1616,6 @@ namespace graphic_exercise
                 camera.pos.y -= 0.1f;
                 Console.WriteLine("下降");
             }
-            //else if(keyData==Keys.Z)
-            //{
-            //    lightMode = LightMode.ON;
-            //    Console.WriteLine("开灯");
-            //}
-            //else if(keyData==Keys.X)
-            //{
-            //    lightMode = LightMode.OFF;
-            //    Console.WriteLine("关灯");
-            //}
-            //else if(keyData==Keys.C)
-            //{
-            //    renderMode = RenderMode.Wireframe;
-            //    Console.WriteLine("画线框");
-            //}
-            //else if(keyData==Keys.V)
-            //{
-            //    renderMode = RenderMode.Entity;
-            //    Console.WriteLine("画实体");
-            //}
-            //else if(keyData==Keys.B)
-            //{
-            //    faceCullMode = FaceCullMode.ON;
-            //    Console.WriteLine("开启背面剪裁");
-            //}
-            //else if (keyData == Keys.N)
-            //{
-            //    faceCullMode = FaceCullMode.OFF;
-            //    Console.WriteLine("关闭背面剪裁");
-            //}
             return true;
         }
 
@@ -1270,6 +1674,35 @@ namespace graphic_exercise
                 BWuXiaoLinLine.Text = "抗锯齿";
             }
         }
+
+        public void b_Clip(object sender, EventArgs e)
+        {
+            if(clipTest==ClipTest.ON)
+            {
+                clipTest = ClipTest.OFF;
+                BClipTest.Text = "剪裁";
+            }
+            else if(clipTest==ClipTest.OFF)
+            {
+                clipTest = ClipTest.ON;
+                BClipTest.Text = "不剪裁";
+            }
+        }
+
+        public void b_TextColor(object sender, EventArgs e)
+        {
+            if (textColors == TextColor.ON)
+            {
+                textColors = TextColor.OFF;
+                BTextColor.Text = "颜色";
+            }
+            else if (textColors == TextColor.OFF)
+            {
+                textColors = TextColor.ON;
+                BTextColor.Text = "纹理";
+            }
+        }
+
 
         #endregion
     }

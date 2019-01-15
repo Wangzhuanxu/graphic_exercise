@@ -1,4 +1,5 @@
-﻿using System;
+﻿# define DEBUG
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -66,10 +67,10 @@ namespace graphic_exercise.RenderData
         /// <returns></returns>
         public System.Drawing.Color TransFormToSystemColor()
         {
-            float r = this.r * 255;
-            float g = this.g * 255;
-            float b = this.b * 255;
-            float a = this.a * 255;
+            float r =clamp( this.r * 255);
+            float g =clamp( this.g * 255);
+            float b =clamp( this.b * 255);
+            float a =clamp( this.a * 255);
             return System.Drawing.Color.FromArgb((int)a, (int)r, (int)g, (int)b);
         }
         /// <summary>
@@ -118,6 +119,21 @@ namespace graphic_exercise.RenderData
             return c;
         }
 
+        public float clamp(float a)
+        {
+            if(a<0)
+            {
+                return 0;
+            }
+            else if(a>255)
+            {
+                return 255;
+            }
+            else
+            {
+                return a;
+            }
+        }
 
         /// <summary>
         /// 限制颜色范围
