@@ -121,27 +121,27 @@ namespace graphic_exercise
 
             this.Controls.Add(BRenderMode);
             BRenderMode.SetBounds(5, 30, 40, 20);
-            BRenderMode.Text = "线框";
+            BRenderMode.Text = "实体";
             BRenderMode.Click += b_Render;
 
             this.Controls.Add(BFaceCullMode);
             BFaceCullMode.SetBounds(5, 55, 60, 20);
-            BFaceCullMode.Text = "消隐";
+            BFaceCullMode.Text = "不消隐";
             BFaceCullMode.Click += b_Cull;
 
             this.Controls.Add(BWuXiaoLinLine);
             BWuXiaoLinLine.SetBounds(5, 80, 60, 20);
-            BWuXiaoLinLine.Text = "锯齿";
+            BWuXiaoLinLine.Text = "平滑线";
             BWuXiaoLinLine.Click += b_Wu;
 
             this.Controls.Add(BClipTest);
             BClipTest.SetBounds(5, 105, 60, 20);
-            BClipTest.Text = "剪裁";
+            BClipTest.Text = "不剪裁";
             BClipTest.Click += b_Clip;
 
             this.Controls.Add(BTextColor);
             BTextColor.SetBounds(5, 130, 40, 20);
-            BTextColor.Text = "颜色";
+            BTextColor.Text = "纹理";
             BTextColor.Click += b_TextColor;
 
 
@@ -334,7 +334,6 @@ namespace graphic_exercise
         /// </summary>
         private void drawTriangle2(Vertex v1,Vertex v2,Vertex v3)
         {
-
             ///透视除法
             projectToScreen(v1);
             projectToScreen(v2);
@@ -355,15 +354,16 @@ namespace graphic_exercise
                     WuXiaoLinDrawLine(v2, v3);
                     WuXiaoLinDrawLine(v3, v1);
                 }
-
             }
             else if (renderMode == RenderMode.Entity)
             {
                 //光栅化
                 rasterizationTriangle(v1, v2, v3);
+                WuXiaoLinDrawLine(v1, v2);
+                WuXiaoLinDrawLine(v2, v3);
+                WuXiaoLinDrawLine(v3, v1);
             }
         }
-
         /// <summary>
         /// 本地到世界坐标系
         /// </summary>
@@ -778,6 +778,9 @@ namespace graphic_exercise
             float w = 0;
             //插值因子
             float t = 0;
+            //uv坐标
+            int u = 0;
+            int v = 0;
             //最终颜色
             graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1, 1, 1, 1);
 
@@ -802,7 +805,8 @@ namespace graphic_exercise
             }
             int dx2 = 2 * dx;
             int dy2 = 2 * dy;
-         
+
+
             if (dx > dy)
             {
                 int max = dx;
@@ -815,16 +819,35 @@ namespace graphic_exercise
                 {
                     //w缓冲
                     t = i / (float)max;
-                    if (Util.Util.lerp(p1.onePerZ, p2.onePerZ, t) == 0)
+                    w = Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                    if ( w== 0)
                     {
                         w = 1;
                     }
                     else
-                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
-                    //光照颜色
-                    finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
-                    //颜色和光照混合
-                    finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                    {
+                        w = 1 / w;
+                    }
+
+                    if (textColors == TextColor.OFF)
+                    {
+                        //光照颜色
+                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                        //颜色和光照混合
+                        finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                    }
+                    else
+                    {
+                        //uv坐标
+                        u = (int)(Util.Util.lerp(p1.uv[0], p2.uv[0], t) * w * (imgWidth - 1));
+                        v = (int)(Util.Util.lerp(p1.uv[1], p2.uv[1], t) * w * (imgHeight - 1));
+                        //光照颜色
+                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                        ////纹理颜色
+                        finalColor = new RenderData.Color(tex(u, v)) * finalColor;
+                    }
+
+                       
 
                     if (x >= 0 && y >= 0 && x < width && y < height)
                         frameBuff.SetPixel(x, y, /*System.Drawing.Color.White*/finalColor.TransFormToSystemColor());
@@ -850,16 +873,33 @@ namespace graphic_exercise
                 {
                     //w缓冲
                     t = i / (float)max;
-                    if (Util.Util.lerp(p1.onePerZ, p2.onePerZ, t) == 0)
+                    w = Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                    if (w == 0)
                     {
                         w = 1;
                     }
                     else
-                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
-                    //光照颜色
-                    finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
-                    //颜色和光照混合
-                    finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                    {
+                        w = 1 / w;
+                    }
+
+                    if (textColors == TextColor.OFF)
+                    {
+                        //光照颜色
+                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                        //颜色和光照混合
+                        finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                    }
+                    else
+                    {
+                        //uv坐标
+                        u = (int)(Util.Util.lerp(p1.uv[0], p2.uv[0], t) * w * (imgWidth - 1));
+                        v = (int)(Util.Util.lerp(p1.uv[1], p2.uv[1], t) * w * (imgHeight - 1));
+                        //光照颜色
+                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                        ////纹理颜色
+                        finalColor = new RenderData.Color(tex(u, v)) * finalColor;
+                    }
 
                     if (x >= 0 && y >= 0 && x < width && y < height)
                         frameBuff.SetPixel(x, y, /*System.Drawing.Color.White*/finalColor.TransFormToSystemColor());
@@ -899,6 +939,9 @@ namespace graphic_exercise
             float w = 0;
             //插值因子
             float t = 0;
+            //uv坐标
+            int u = 0;
+            int v = 0;
             //最终颜色
             graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1, 1, 1, 1);
             if (dx >= 0)
@@ -946,22 +989,43 @@ namespace graphic_exercise
                     t = i / (float)max;
                     if (a >= 0 && b >= 0 && a < width && b < height)
                     {
-                        if(Util.Util.lerp(p1.onePerZ, p2.onePerZ, t)==0)
+                        w = Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                        if (w==0)
                         {
                             w = 1;
                         }
                         else
-                        w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
-                        //光照颜色
-                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
-                        //颜色和光照混合
-                        finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                        {
+                            w = 1 /w;
+                        }
+                        
+                        if(textColors==TextColor.OFF)
+                        {
+                            //光照颜色
+                            finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                            //颜色和光照混合
+                            finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                        }
+                        else
+                        {
+                            //uv坐标
+                            u = (int)(Util.Util.lerp(p1.uv[0], p2.uv[0], t) * w * (imgWidth - 1));
+                            v = (int)(Util.Util.lerp(p1.uv[1], p2.uv[1], t) * w * (imgHeight - 1));
+                            //光照颜色
+                            finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                            ////纹理颜色
+                            finalColor = new RenderData.Color(tex(u, v))* finalColor;
+                        } 
                         e = Math.Abs(error);
-                        frameBuff.SetPixel(a, b,/* new graphic_exercise.RenderData.Color(1-e, 1-e, 1-e, 1)*/(finalColor*(1-e)).TransFormToSystemColor());
+
+                        if(Util.Util.lerp(p1.depth, p2.depth, t)<zbuffer[a,b])
+                        frameBuff.SetPixel(a, b,(finalColor*(1-e)).TransFormToSystemColor());
+
                         b = b + stepy;
                         if (b >= 0 && b < height)
                         {
-                            frameBuff.SetPixel(a, b, /*new graphic_exercise.RenderData.Color(e,  e,  e, 1)*/(finalColor*e).TransFormToSystemColor());
+                            if (Util.Util.lerp(p1.depth, p2.depth, t) < zbuffer[a, b])
+                                frameBuff.SetPixel(a, b, (finalColor*e).TransFormToSystemColor());
                         }
                     }
                     x += stepx;
@@ -1002,22 +1066,44 @@ namespace graphic_exercise
                     t = i / (float)max;
                     if (a >= 0 && b >= 0 && a < width && b < height)
                     {
-                        if (Util.Util.lerp(p1.onePerZ, p2.onePerZ, t) == 0)
+                        w = Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                        if (w == 0)
                         {
                             w = 1;
                         }
                         else
-                            w = 1 / Util.Util.lerp(p1.onePerZ, p2.onePerZ, t);
+                        {
+                            w = 1 / w;
+                        }
 
-                        // 光照颜色
-                        finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
-                        //颜色和光照混合
-                        finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                        if (textColors==TextColor.OFF)
+                        {
+                            // 光照颜色
+                            finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                            //颜色和光照混合
+                            finalColor = Util.Util.lerp(p1.color, p2.color, t) * w * finalColor;
+                        }
+                        else
+                        {
+                            //uv坐标
+                            u = (int)(Util.Util.lerp(p1.uv[0], p2.uv[0], t) * w * (imgWidth - 1));
+                            v = (int)(Util.Util.lerp(p1.uv[1], p2.uv[1], t) * w * (imgHeight - 1));
+                            //光照颜色
+                            finalColor = Util.Util.lerp(p1.lightColor, p2.lightColor, t) * w;
+                            ////纹理颜色
+                            finalColor = new RenderData.Color(tex(u, v))*finalColor;
+                            
+                        }
+
+
                         e = Math.Abs(error);
                         frameBuff.SetPixel(a, b, (finalColor * (1 - e)).TransFormToSystemColor());
+
+
                         a = x + stepx;
                         if (a >= 0 && a < width)
                             frameBuff.SetPixel(a, b, (finalColor * e).TransFormToSystemColor());
+
                     }
                     error += k * stepy;
                     y += stepy;
@@ -1200,11 +1286,11 @@ namespace graphic_exercise
                     //扫描线填充
                     if (left.pos.x < right.pos.x)
                     {
-                        scanLine(left, right, yIndex);
+                        scanLine(left, right, yIndex,true);
                     }
                     else
                     {
-                        scanLine(right, left, yIndex);
+                        scanLine(right, left, yIndex,false);
                     }
 
                 }
@@ -1249,11 +1335,11 @@ namespace graphic_exercise
                     //扫描线填充
                     if (left.pos.x < right.pos.x)
                     {
-                        scanLine(left, right, yIndex);
+                        scanLine(left, right, yIndex,false);
                     }
                     else
                     {
-                        scanLine(right, left, yIndex);
+                        scanLine(right, left, yIndex,true);
                     }
                 }
             }
@@ -1264,7 +1350,7 @@ namespace graphic_exercise
         /// <param name="left">左顶点</param>
         /// <param name="right">右顶点</param>
         /// <param name="yIndex">y值</param>
-        private void scanLine(Vertex left, Vertex right, int yIndex)
+        private void scanLine(Vertex left, Vertex right, int yIndex,bool stright)
         {
             //求线段长度
             int x = (int)(System.Math.Round(left.pos.x, MidpointRounding.AwayFromZero));
@@ -1297,10 +1383,6 @@ namespace graphic_exercise
 
             for (int i = 0; i <= dx; i +=1)
             {
-                //if (dx != 0)
-                //{
-                //    t = i /(float)dx;
-                //}
                 checked
                 {
                     t = i / (float)max;
@@ -1314,21 +1396,22 @@ namespace graphic_exercise
                     if (zbuffer[xIndex, yIndex] >= death)
                     {
                         //w缓冲
-                        if(Util.Util.lerp(left.onePerZ, right.onePerZ, t)==0)
+                        w = Util.Util.lerp(left.onePerZ, right.onePerZ, t);
+                        if (w==0)
                         {
                             w = 1;
                         }
                         else
-                        w = 1 / Util.Util.lerp(left.onePerZ, right.onePerZ, t);
-                        
+                        {
+                            w = 1 / w;
+                        }
+                      
                         //深度值
                         zbuffer[xIndex, yIndex] = death;
                         //uv坐标
                         u =(int)(Util.Util.lerp(left.uv[0], right.uv[0], t)*w*(imgWidth-1));
                         v = (int)(Util.Util.lerp(left.uv[1], right.uv[1], t) * w * (imgHeight - 1));
 
-                        //纹理颜色
-                        graphic_exercise.RenderData.Color texColor = new graphic_exercise.RenderData.Color();
                         //最终颜色
                         graphic_exercise.RenderData.Color finalColor = new RenderData.Color(1,1,1,1);
                         if (textColors == TextColor.OFF)
@@ -1341,11 +1424,13 @@ namespace graphic_exercise
                         }
                         else
                         {
+                            //光照颜色
+                            finalColor = Util.Util.lerp(left.lightColor, right.lightColor, t) * w;
                             ////纹理颜色
-                            texColor = new RenderData.Color(tex(u, v));
-                            finalColor = texColor;
+                            finalColor = new RenderData.Color(tex(u, v))*finalColor;
                         }
                         frameBuff.SetPixel(xIndex, yIndex, finalColor.TransFormToSystemColor());
+
                     }
                 }
                 x += stepx;
@@ -1571,7 +1656,7 @@ namespace graphic_exercise
             if (canMove)
             {
                 pos = camera.pos;
-                pos = Matrix4x4.translate(camera.look.x, camera.look.y, camera.look.z) * Matrix4x4.rotateY(ry) * Matrix4x4.rotateX(rx) * Matrix4x4.translate(-camera.look.x, -camera.look.y, -camera.look.z) * pos;
+                pos = Matrix4x4.translate(camera.look.x, camera.look.y, camera.look.z) * Matrix4x4.rotateY(-ry) * Matrix4x4.rotateX(rx) * Matrix4x4.translate(-camera.look.x, -camera.look.y, -camera.look.z) * pos;
                 camera.pos = pos;
                 lastPoint.X = e.Location.X;
                 lastPoint.Y = e.Location.Y;
@@ -1624,12 +1709,12 @@ namespace graphic_exercise
             if(lightMode==LightMode.ON)
             {
                 lightMode = LightMode.OFF;
-                BLightSwitch.Text = "关灯";
+                BLightSwitch.Text = "开灯";
             }
             else if(lightMode==LightMode.OFF)
             {
                 lightMode = LightMode.ON;
-                BLightSwitch.Text = "开灯";
+                BLightSwitch.Text = "关灯";
             }
         }
 
@@ -1638,12 +1723,12 @@ namespace graphic_exercise
             if (renderMode == RenderMode.Entity)
             {
                 renderMode = RenderMode.Wireframe;
-                BRenderMode.Text = "线框";
+                BRenderMode.Text = "实体";
             }
             else if (renderMode == RenderMode.Wireframe)
             {
                 renderMode = RenderMode.Entity;
-                BRenderMode.Text = "实体";
+                BRenderMode.Text = "线框";
             }
         }
 
@@ -1652,12 +1737,12 @@ namespace graphic_exercise
             if (faceCullMode == FaceCullMode.ON)
             {
                 faceCullMode = FaceCullMode.OFF;
-                BFaceCullMode.Text = "不消隐";
+                BFaceCullMode.Text = "消隐";
             }
             else if (faceCullMode == FaceCullMode.OFF)
             {
                 faceCullMode = FaceCullMode.ON;
-                BFaceCullMode.Text = "消隐";
+                BFaceCullMode.Text = "不消隐";
             }
         }
 
@@ -1666,12 +1751,12 @@ namespace graphic_exercise
             if (xiaoLinLine == WuXiaoLinLine.ON)
             {
                 xiaoLinLine = WuXiaoLinLine.OFF;
-                BWuXiaoLinLine.Text = "锯齿";
+                BWuXiaoLinLine.Text = "平滑线";
             }
             else if (xiaoLinLine == WuXiaoLinLine.OFF)
             {
                 xiaoLinLine = WuXiaoLinLine.ON;
-                BWuXiaoLinLine.Text = "抗锯齿";
+                BWuXiaoLinLine.Text = "锯齿线";
             }
         }
 
@@ -1680,12 +1765,12 @@ namespace graphic_exercise
             if(clipTest==ClipTest.ON)
             {
                 clipTest = ClipTest.OFF;
-                BClipTest.Text = "剪裁";
+                BClipTest.Text = "不剪裁";
             }
             else if(clipTest==ClipTest.OFF)
             {
                 clipTest = ClipTest.ON;
-                BClipTest.Text = "不剪裁";
+                BClipTest.Text = "剪裁";
             }
         }
 
@@ -1694,16 +1779,26 @@ namespace graphic_exercise
             if (textColors == TextColor.ON)
             {
                 textColors = TextColor.OFF;
-                BTextColor.Text = "颜色";
+                BTextColor.Text = "纹理";
             }
             else if (textColors == TextColor.OFF)
             {
                 textColors = TextColor.ON;
-                BTextColor.Text = "纹理";
+                BTextColor.Text = "颜色";
             }
         }
 
 
         #endregion
+
+
+
+
+
+
+
+
+
+
     }
 }
