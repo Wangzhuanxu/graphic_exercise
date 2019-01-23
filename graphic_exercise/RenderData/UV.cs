@@ -18,5 +18,24 @@ namespace graphic_exercise.RenderData
             this.x = x;
             this.y = y;
         }
+        public UV()
+        {
+
+        }
+
+        public static UV operator- (UV uv1,UV uv2)
+        {
+            return new UV(uv1.x - uv2.x, uv1.y - uv2.y);
+        }
+
+        public static UV operator +(UV uv1, UV uv2)
+        {
+            return new UV(uv1.x + uv2.x, uv1.y + uv2.y);
+        }
+
+        public static UV operator *(UV uv1, float x)
+        {
+            return new UV(uv1.x *x, uv1.y *x);
+        }
     }
 }

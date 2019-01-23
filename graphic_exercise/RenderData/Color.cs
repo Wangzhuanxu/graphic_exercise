@@ -47,7 +47,7 @@ namespace graphic_exercise.RenderData
             this._r = Range(r, 0, 1);
             this._g = Range(g, 0, 1);
             this._b = Range(b, 0, 1);
-            this._a = Range(a, 0, 1);
+            this._a = 1;
         }
 
         public Color(System.Drawing.Color c)
@@ -85,7 +85,7 @@ namespace graphic_exercise.RenderData
             c.r = a.r * b.r;
             c.g = a.g * b.g;
             c.b = a.b * b.b;
-            c.a = a.a * b.a;
+            c.a = 1;
             return c;
         }
         /// <summary>
@@ -100,7 +100,7 @@ namespace graphic_exercise.RenderData
             c.r = a.r * b;
             c.g = a.g * b;
             c.b = a.b * b;
-            c.a = a.a * b;
+            c.a = 1;
             return c;
         }
         /// <summary>
@@ -115,7 +115,7 @@ namespace graphic_exercise.RenderData
             c.r = a.r + b.r;
             c.g = a.g + b.g;
             c.b = a.b + b.b;
-            c.a = a.a + b.a;
+            c.a = 1;
             return c;
         }
 

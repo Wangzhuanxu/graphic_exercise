@@ -13,7 +13,7 @@ namespace graphic_exercise.RenderData
     {
         public List<Vertex> vertexList;//顶点列表
         public List<Index> indexsList;//索引列表
-        public List<Color> colorList;
+        //public List<Color> colorList;
         /// <summary>
         /// 初始化三角形网格顶点
         /// </summary>

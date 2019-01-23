@@ -30,7 +30,7 @@ namespace graphic_exercise.Test
                                    //后
                                    new Index(7,4,5),
                                    new Index(7,5,6),
-                                  // //左
+                                   //左
                                    new Index(4,0,1),
                                    new Index(4,1,5),
                                    //上
@@ -75,7 +75,7 @@ namespace graphic_exercise.Test
                                                new Vector(0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f), new Vector(0.5773503f,-0.5773503f,0.5773503f),
                                                //左401 415
                                                 new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,0.5773503f,-0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f),
-                                              new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f),
+                                                new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(-0.5773503f,-0.5773503f,-0.5773503f), new Vector(-0.5773503f,-0.5773503f,0.5773503f),
                                                //上 473 430
                                                 new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,0.5773503f,-0.5773503f),
                                               new Vector(-0.5773503f,0.5773503f,0.5773503f), new Vector(0.5773503f,0.5773503f,-0.5773503f), new Vector(-0.5773503f,0.5773503f,-0.5773503f),
@@ -109,6 +109,6 @@ namespace graphic_exercise.Test
                                          };
 
         //材质
-        public static Material mat = new Material(new Color(0.01f, 0.01f,0.01f, 1), new Color(0.8f, 0.8f, 0.8f, 0.8f), new Color(1, 1,1, 1), 99);
+        public static Material mat = new Material(new Color(0.01f, 0.01f,0.01f, 1), new Color(0.8f, 0.8f, 0.8f, 0.8f), new Color(0.5f, 0.5f,0.5f, 0.5f),99);
     }
 }

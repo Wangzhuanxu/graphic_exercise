@@ -72,7 +72,7 @@ namespace graphic_exercise.RenderData
         /// </summary>
         /// <param name="v1"></param>
         /// <param name="v2"></param>
-        public static void Clone(Vertex v1,Vertex v2)
+        public static void Clone2(Vertex v1,Vertex v2)
         {
             v2.pos.x = v1.pos.x;
             v2.pos.y = v1.pos.y;
@@ -99,6 +99,37 @@ namespace graphic_exercise.RenderData
             v2.material.gloss = v1.material.gloss;
 
             v2.onePerZ = v1.onePerZ;
+       
+        }
+
+        public static void Clone(Vertex v1, Vertex v2)
+        {
+            v2.pos.x = v1.pos.x;
+            v2.pos.y = v1.pos.y;
+            v2.pos.z = v1.pos.z;
+            v2.pos.w = v1.pos.w;
+            v2.normal.x = v1.normal.x;
+            v2.normal.y = v1.normal.y;
+            v2.normal.z = v1.normal.z;
+            v2.normal.w = v1.normal.w;
+            v2.uv[0] = v1.uv[0];
+            v2.uv[1] = v1.uv[1];
+            v2.color.r = v1.color.r;
+            v2.color.g = v1.color.g;
+            v2.color.b = v1.color.b;
+            v2.color.a = v1.color.a;
+            v2.lightColor.r = v1.lightColor.r;
+            v2.lightColor.g = v1.lightColor.g;
+            v2.lightColor.b = v1.lightColor.b;
+            v2.lightColor.a = v1.lightColor.a;
+
+            v2.material.ambient = v1.material.ambient;
+            v2.material.diffuse = v1.material.diffuse;
+            v2.material.specular = v1.material.specular;
+            v2.material.gloss = v1.material.gloss;
+
+            v2.onePerZ = v1.onePerZ;
+            v2.depth = v1.depth;
         }
     }
 }

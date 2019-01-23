@@ -31,7 +31,7 @@ namespace graphic_exercise.Util
             c.r = t * c2.r + (1 - t) * c1.r;
             c.g = t * c2.g + (1 - t) * c1.g;
             c.b = t * c2.b + (1 - t) * c1.b;
-            c.a = t * c2.a + (1 - t) * c1.a;
+            c.a = 1;
             return c;
         }
         /// <summary>
@@ -74,6 +74,22 @@ namespace graphic_exercise.Util
             //插值矫正系数
             v.onePerZ = lerp(v1.onePerZ, v2.onePerZ, t);
         }
+
+        public static void lerp(Vertex v, Vertex v1, Vertex v2, float t,float l)
+        {
+            //插值矫正系数
+            v.onePerZ = lerp(v1.onePerZ, v2.onePerZ, t);
+            //颜色插值
+            v.color = lerp(v1.color, v2.color, t);
+            //uv插值
+            v.uv[0] = lerp(v1.uv[0], v2.uv[0], t)+(l*v.onePerZ);
+            v.uv[1] = lerp(v1.uv[1], v2.uv[1], t);
+            //深度值插值
+            v.depth = lerp(v1.depth, v2.depth, t);
+            //光照颜色插值
+            v.lightColor = lerp(v1.lightColor, v2.lightColor, t);
+        
+        }
         /// <summary>
         /// 求两者之间的距离
         /// </summary>
@@ -82,5 +98,7 @@ namespace graphic_exercise.Util
         {
             return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
         }
+
+       
     }
 }
