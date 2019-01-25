@@ -37,10 +37,12 @@ namespace graphic_exercise
         const int imgWidth = 256;//图片宽高
         const int imgHeight = 256;
         System.Drawing.Color[,] textureArray;//纹理颜色值
-        System.Drawing.Color[,] frameArray;//屏幕颜色
         //屏幕宽高
         int width = 800+16;
         int height = 600+40;
+        //UI线程
+        SynchronizationContext _syncContext = null;
+        System.Object myLock = new object();
 
         /// <summary>
         /// 显示console窗口
@@ -95,10 +97,11 @@ namespace graphic_exercise
             System.Drawing.Image img = System.Drawing.Image.FromFile("../../Texture/fireFox.png");
             texture = new Bitmap(img, imgWidth, imgHeight);
             initTexture();
+            //初始化UI线程
+            _syncContext = SynchronizationContext.Current;
 
-            frameArray = new System.Drawing.Color[width, height];
 #if DEBUG
-           // Console.WriteLine(" this.Width / (float)this.Height=" + this.Width / (float)this.Height);
+            // Console.WriteLine(" this.Width / (float)this.Height=" + this.Width / (float)this.Height);
 #endif
             //启用绘制线程
             t = new Thread(new ThreadStart(Tick));
@@ -108,6 +111,7 @@ namespace graphic_exercise
             this.MouseMove += mouseMove;
             this.MouseDown += mouseDown;
             this.MouseUp += mouseUp;
+
 
             // winform按钮
             this.Controls.Add(BLightSwitch);
@@ -139,46 +143,11 @@ namespace graphic_exercise
             BTextColor.SetBounds(5, 80, 40, 20);
             BTextColor.Text = "纹理";
             BTextColor.Click += b_TextColor;
-
-
-            // 测试数据
-            //Vector v = new Vector(1, 0, 0);
-            //Matrix4x4 m = Matrix4x4.translate(5, 0, 25) * Matrix4x4.rotateY((float)(Math.PI / 18 * 15)) * Matrix4x4.scale(2, 2, 2);
-            //Matrix4x4 vv = Matrix4x4.view(camera.look, camera.up, camera.pos);
-            //Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
-            //v = m * v;
-            //l = new Label();
-            //l.SetBounds(100, 100, 300, 300);
-            //this.Controls.Add(l);
-            //print(l, m, vv, p);
-
-
-        }
-
-        /// <summary>
-        /// 测试方法，主要测试矩阵是否正确
-        /// </summary>
-        private void print( Matrix4x4 m, Matrix4x4 mv, Matrix4x4 p)
-        {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < m.matrix.GetLength(0); i++)
-            {
-                for (int j = 0; j < m.matrix.GetLength(1); j++)
-                {
-                    sb.Append(m.matrix[i, j] + " ");
-                }
-                sb.Append("\n");
-            }
-            Vector v = new Vector(-1, 1, 8, 1);
-            v = mv * m * v;
-            sb.Append(v.x + "  " + v.y + " " + v.z + " " + v.w + " " + v.z / v.w + "  " + 1 / v.w);
-            Console.WriteLine(sb.ToString());
         }
 
         public void clearBuff()
         {
             frameG.Clear(graphic_exercise.RenderData.Color.Black.TransFormToSystemColor());//清除颜色缓存
-            Array.Clear(frameArray, 0, width * height);
             clearDeath();
         }
         /// <summary>
@@ -218,28 +187,16 @@ namespace graphic_exercise
                    p2,
                     p3
                     , m, v, p);
-                //drawTriangle(triangles.vertexList[triangles.indexsList[i].one].clone(), 
-                //    triangles.vertexList[triangles.indexsList[i].two].clone(), 
-                //    triangles.vertexList[triangles.indexsList[i].three].clone()
-                //    , m, v, p);
-                //drawTriangle(triangles.vertexList[i].clone(),
-                //    triangles.vertexList[i + 1].clone(),
-                //    triangles.vertexList[i + 2].clone()
-                //    , m, v, p);
-                //this.Text = triangles.vertexList[triangles.indexsList[i].one].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].one].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].one].pos.z + " "
-                //           + triangles.vertexList[triangles.indexsList[i].two].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].two].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].two].pos.z + " " +
-                //           triangles.vertexList[triangles.indexsList[i].three].pos.x + "   " + triangles.vertexList[triangles.indexsList[i].three].pos.y + "    " + triangles.vertexList[triangles.indexsList[i].three].pos.z;
             }
-            if (xiaoLinLine == WuXiaoLinLine.ON&& renderMode == RenderMode.Entity)
-            {
-                for (int i = 1; i < width -1; i++)
-                {
-                    for (int j = 1; j < height - 1; j++)
-                    {
-                        edgeTest2(i, j);
-                    }
-                }
-            }
+            //if (xiaoLinLine == WuXiaoLinLine.ON&& renderMode == RenderMode.Entity)
+            //{
+            //    for (int i = 1; i < width -1; i++)
+            //    {
+            //        for (int j = 1; j < height - 1; j++)
+            //        {
+            //        }
+            //    }
+            //}
             
         }
         /// <summary>
@@ -1050,109 +1007,6 @@ namespace graphic_exercise
         }
         #endregion
 
-        #region 光栅化2.0
-
-        //private void drawTriangleBottom(Vertex v1, Vertex v2, Vertex v3)
-        //{
-        //    //int x1 = (int)(System.Math.Ceiling(v1.pos.x));
-        //    //int x2 = (int)(System.Math.Ceiling(v2.pos.x));
-        //    //int x3 = (int)(System.Math.Ceiling(v3.pos.x));
-        //    int y1 = (int)(System.Math.Ceiling(v1.pos.y));
-        //    //int y2 = (int)(System.Math.Ceiling(v2.pos.y));
-        //    int y3 = (int)(System.Math.Ceiling(v3.pos.y));
-        //    float dx3 = (v3.pos.x - v1.pos.x) / (float)(v3.pos.y - v1.pos.y);
-        //    float dx2 = (v2.pos.x - v1.pos.x) / (float)(v2.pos.y - v1.pos.y);
-
-        //    //Vertex temp1=
-
-        //    float xleft = (float)(v1.pos.x +(Math.Ceiling(v1.pos.y) - v1.pos.y) *dx3);
-        //    float xright = (float)(v1.pos.x + (Math.Ceiling(v1.pos.y) - v1.pos.y) * dx2);
-        //    for (int y = y1; y < y3; y += 1)
-        //    {
-        //        //防止浮点数精度不准，四舍五入，使y的值每次增加1
-        //        // int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
-        //        // int yIndex = y;// (int)Math.Ceiling(y);
-        //        //裁剪掉屏幕外的线
-        //        if (y >= 0 && y < height)
-        //        {
-
-        //            //插值因子
-        //            float t = (y - y1) / (float)(y3 - y1);
-        //            //左顶点
-        //            Vertex left = new Vertex();
-        //            left.pos.x = xleft;
-        //            left.pos.y = y;
-        //            Util.Util.lerp(left, v1, v3, t);
-        //            //
-        //            Vertex right = new Vertex();
-        //            right.pos.x = xright;
-        //            right.pos.y = y;
-        //            Util.Util.lerp(right, v1, v2, t);
-        //            //扫描线填充
-        //            if (left.pos.x < right.pos.x)
-        //            {
-        //                scanLine(left, right, y);
-        //            }
-        //            else
-        //            {
-        //                scanLine(right, left, y);
-        //            }
-
-        //        }
-        //        xleft += dx3;
-        //        xright += dx2;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// 平顶三角形
-        ///// </summary>
-        //private void drawTriangleTop(Vertex v1, Vertex v2, Vertex v3)
-        //{
-        //    //int x1 = (int)(System.Math.Ceiling(v1.pos.x));
-        //    //int x2 = (int)(System.Math.Ceiling(v2.pos.x));
-        //    //int x3 = (int)(System.Math.Ceiling(v3.pos.x));
-        //    int y1 = (int)(System.Math.Ceiling(v1.pos.y));
-        //    //int y2 = (int)(System.Math.Ceiling(v2.pos.y));
-        //    int y3 = (int)(System.Math.Ceiling(v3.pos.y));
-        //    float dx1 = (v3.pos.x - v1.pos.x) / (float)(v3.pos.y - v1.pos.y);
-        //    float dx2 = (v3.pos.x - v2.pos.x) / (float)(v3.pos.y - v2.pos.y);
-
-        //    float xleft = (float)(v1.pos.x +(Math.Ceiling(v1.pos.y)- v1.pos.y) *dx1);
-        //    float xright =(float)( v2.pos.x + (Math.Ceiling(v1.pos.y) - v1.pos.y) * dx2);
-        //    for (int y = y1; y < y3; y += 1)
-        //    {
-        //        if (y >= 0 && y < height)
-        //        {
-        //            //插值因子
-        //            float t = (y - y1) / (float)(y3 - y1);
-        //            //左顶点
-        //            Vertex left = new Vertex();
-        //            left.pos.x = xleft;
-        //            left.pos.y = y;
-        //            Util.Util.lerp(left, v1, v3, t);
-        //            //
-        //            Vertex right = new Vertex();
-        //            right.pos.x = xright;
-        //            right.pos.y = y;
-        //            Util.Util.lerp(right, v2, v3, t);
-        //            //扫描线填充
-        //            if (left.pos.x < right.pos.x)
-        //            {
-        //                scanLine(left, right, y);
-        //            }
-        //            else
-        //            {
-        //                scanLine(right, left, y);
-        //            }
-        //        }
-        //        xleft += dx1;
-        //        xright += dx2;
-        //    }
-        //}
-
-        #endregion
-
         /// <summary>
         /// 填充
         /// </summary>
@@ -1241,7 +1095,6 @@ namespace graphic_exercise
                             finalColor = new RenderData.Color(tex(u, v))*finalColor;
                         }
                         frameBuff.SetPixel(xIndex, yIndex, finalColor.TransFormToSystemColor());
-                        frameArray[xIndex, yIndex] = finalColor.TransFormToSystemColor();
                     }
                 }
                 x += stepx;
@@ -1360,56 +1213,34 @@ namespace graphic_exercise
             Matrix4x4 p;
             while (true)
             {
-                triangleNum = 0;
-                //清除颜色缓存
-                clearBuff();
-                //求mvp矩阵
-                 m= Matrix4x4.translate(0, 3, tranZ) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
-                 v= Matrix4x4.view(camera.look, camera.up, camera.pos);
-                 p= Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
-                lastTime = DateTime.Now;
-                //绘制
-                draw(m, v, p);
-                
-                if (g == null)
+                lock(myLock)
                 {
-                    g = this.CreateGraphics();
+                    triangleNum = 0;
+                    //清除颜色缓存
+                    clearBuff();
+                    //求mvp矩阵
+                    m = Matrix4x4.translate(0, 3, tranZ) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
+                    v = Matrix4x4.view(camera.look, camera.up, camera.pos);
+                    p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
+                    lastTime = DateTime.Now;
+                    //绘制
+                    draw(m, v, p);
+
+                    if (g == null)
+                    {
+                        g = this.CreateGraphics();
+                    }
+                    g.DrawImage(frameBuff, 0, 0);
+                    now = DateTime.Now;
+                    timeSpan = now - lastTime;
+                    _syncContext.Post(SetLabelText, "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds));//子线程中通过UI线程上下文更新UI 
+                    lastTime = now;
                 }
-                g.DrawImage(frameBuff, 0, 0);
-                now = DateTime.Now;
-                timeSpan = now - lastTime;
-                this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) ;
-                lastTime = now;
             }
         }
-        /// <summary>
-        /// 刷帧测试方法
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnPaint(PaintEventArgs e)
+        private void SetLabelText(object text)
         {
-            //triangleNum = 0;
-            //lastTime = DateTime.Now;
-            ////清除颜色缓存
-            //clearBuff();
-            ////求mvp矩阵
-            //Matrix4x4 m = Matrix4x4.translate(0, 0, 10) * Matrix4x4.rotateY(rotY) * Matrix4x4.rotateX(rotX) * Matrix4x4.rotateZ(rotZ);
-            //Matrix4x4 v = Matrix4x4.view(camera.look, camera.up, camera.pos);
-            //Matrix4x4 p = Matrix4x4.project(camera.fov, camera.aspect, camera.near, camera.far);
-            ////绘制
-            //// print(m, v, p);
-            //draw(m, v, p);
-            //now = DateTime.Now;
-            //timeSpan = now - lastTime;
-            //this.Text = "帧率：" + (int)Math.Ceiling(1000 / timeSpan.TotalMilliseconds) + "         绘制的三角形个数:" + triangleNum + "    " + timeSpan.TotalMilliseconds;
-            //lastTime = now;
-            //if (g == null)
-            //{
-            //    g = this.CreateGraphics();
-            //}
-            //g.DrawImage(frameBuff, 0, 0);
-
-
+            this.Text = text.ToString();
         }
 
         #endregion
@@ -1443,13 +1274,20 @@ namespace graphic_exercise
         //能否移动
         bool canMove = false;
         float angle = (float)(Math.PI / 90);
+        //xz轴转动角度
+        float total = 0;
+        float maxAngle = (float)(Math.PI / 3/3*4);
         /// <summary>
         /// 鼠标点击事件
         /// </summary>
         public void mouseDown(object sender, MouseEventArgs e)
         {
-           // lastPoint = e.Location;
             canMove = true;
+            //if(e.Button==MouseButtons.Left)
+            //{
+            //    canMove = true;
+            //}
+         
         }
         /// <summary>
         /// 鼠标移动
@@ -1458,7 +1296,7 @@ namespace graphic_exercise
         {
             float dx = Util.Util.distance(e.X, 0, lastPoint.X, 0);
             float dy = Util.Util.distance(e.Y, 0, lastPoint.Y, 0);
-            if (dx>=dy&&dx>= 5&& canMove)
+            if (dx>=dy&&dx>= 1&& canMove)
             {
                 if (e.Location.X - lastPoint.X > 0)
                 {
@@ -1469,7 +1307,7 @@ namespace graphic_exercise
                     ry = -angle;
                 }
             }
-            else if (dy>dx&&dy >= 5&& canMove)
+            else if (dy>dx&&dy >= 1&& canMove)
             {
                 if (e.Location.Y - lastPoint.Y > 0)
                 {
@@ -1479,23 +1317,38 @@ namespace graphic_exercise
                 {
                     rx = -angle;
                 }
+
+                if (total >-maxAngle&&total<maxAngle)
+                {
+                    total += rx;
+                }
+                else
+                {
+                    if(total<=-maxAngle&&rx<0)
+                    {
+                        rx = 0;
+                    }
+                    else if(total>=maxAngle&&rx>0)
+                    {
+                        rx = 0;
+                    }
+                    else
+                    {
+                        total += rx;
+                    }
+                }
             }
 
             if (canMove)
             {
-                //pos = camera.pos;
-                //pos = Matrix4x4.translate(camera.look.x, camera.look.y, camera.look.z) * Matrix4x4.rotateY(ry) * Matrix4x4.rotateX(rx) * Matrix4x4.translate(-camera.look.x, -camera.look.y, -camera.look.z) * pos;
-                //camera.pos = pos;
-                pos = camera.look-camera.pos;
-                pos =  Matrix4x4.rotateY(ry) * Matrix4x4.rotateX(rx) * pos;
-                camera.look = pos+camera.pos;
 
-                //Vector N = camera.look - camera.pos;
-                //N.normalize();
-                //Vector U = Vector.cross(camera.up, N);
-                //U.normalize();
-                //camera.up = Vector.cross(N, U);
-                //camera.up.normalize();
+                Vector N = camera.look - camera.pos;
+                N.normalize();
+                Vector U = Vector.cross(camera.up, N);
+                U.normalize();
+                pos = camera.look-camera.pos;
+                pos = Matrix4x4.ArbitraryAxis(Vector.opposite(U),rx) * Matrix4x4.rotateY(ry) *pos;
+                camera.look = pos+camera.pos;
 
                 lastPoint.X = e.Location.X;
                 lastPoint.Y = e.Location.Y;
@@ -1508,7 +1361,7 @@ namespace graphic_exercise
             canMove = false;
         }
         /// <summary>
-        /// 键盘事件监听
+        /// 键盘事件监听 
         /// </summary>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -1564,587 +1417,109 @@ namespace graphic_exercise
 
         public void b_Light(object sender, EventArgs e)
         {
-            if(lightMode==LightMode.ON)
+            lock(myLock)
             {
-                lightMode = LightMode.OFF;
-                BLightSwitch.Text = "开灯";
-            }
-            else if(lightMode==LightMode.OFF)
-            {
-                lightMode = LightMode.ON;
-                BLightSwitch.Text = "关灯";
+                if (lightMode == LightMode.ON)
+                {
+                    lightMode = LightMode.OFF;
+                    BLightSwitch.Text = "开灯";
+                }
+                else if (lightMode == LightMode.OFF)
+                {
+                    lightMode = LightMode.ON;
+                    BLightSwitch.Text = "关灯";
+                }
             }
         }
 
         public void b_Render(object sender, EventArgs e)
         {
-            if (renderMode == RenderMode.Entity)
+            lock(myLock)
             {
-                renderMode = RenderMode.Wireframe;
-                BRenderMode.Text = "实体";
-            }
-            else if (renderMode == RenderMode.Wireframe)
-            {
-                renderMode = RenderMode.Entity;
-                BRenderMode.Text = "线框";
+                if (renderMode == RenderMode.Entity)
+                {
+                    renderMode = RenderMode.Wireframe;
+                    BRenderMode.Text = "实体";
+                }
+                else if (renderMode == RenderMode.Wireframe)
+                {
+                    renderMode = RenderMode.Entity;
+                    BRenderMode.Text = "线框";
+                }
             }
         }
 
         public void b_Cull(object sender, EventArgs e)
         {
-            if (faceCullMode == FaceCullMode.ON)
+            lock(myLock)
             {
-                faceCullMode = FaceCullMode.OFF;
-                BFaceCullMode.Text = "消隐";
-            }
-            else if (faceCullMode == FaceCullMode.OFF)
-            {
-                faceCullMode = FaceCullMode.ON;
-                BFaceCullMode.Text = "不消隐";
+                if (faceCullMode == FaceCullMode.ON)
+                {
+                    faceCullMode = FaceCullMode.OFF;
+                    BFaceCullMode.Text = "消隐";
+                }
+                else if (faceCullMode == FaceCullMode.OFF)
+                {
+                    faceCullMode = FaceCullMode.ON;
+                    BFaceCullMode.Text = "不消隐";
+                }
             }
         }
 
         public void b_Wu(object sender, EventArgs e)
         {
-            if (xiaoLinLine == WuXiaoLinLine.ON)
+            lock(myLock)
             {
-                xiaoLinLine = WuXiaoLinLine.OFF;
-                BWuXiaoLinLine.Text = "平滑线";
-            }
-            else if (xiaoLinLine == WuXiaoLinLine.OFF)
-            {
-                xiaoLinLine = WuXiaoLinLine.ON;
-                BWuXiaoLinLine.Text = "锯齿线";
+                if (xiaoLinLine == WuXiaoLinLine.ON)
+                {
+                    xiaoLinLine = WuXiaoLinLine.OFF;
+                    BWuXiaoLinLine.Text = "平滑线";
+                }
+                else if (xiaoLinLine == WuXiaoLinLine.OFF)
+                {
+                    xiaoLinLine = WuXiaoLinLine.ON;
+                    BWuXiaoLinLine.Text = "锯齿线";
+                }
             }
         }
 
         public void b_Clip(object sender, EventArgs e)
         {
-            if(clipTest==ClipTest.ON)
+            lock (myLock)
             {
-                clipTest = ClipTest.OFF;
-                BClipTest.Text = "不剪裁";
-            }
-            else if(clipTest==ClipTest.OFF)
-            {
-                clipTest = ClipTest.ON;
-                BClipTest.Text = "剪裁";
+                if (clipTest == ClipTest.ON)
+                {
+                    clipTest = ClipTest.OFF;
+                    BClipTest.Text = "剪裁";
+                }
+                else if (clipTest == ClipTest.OFF)
+                {
+                    clipTest = ClipTest.ON;
+                    BClipTest.Text = "不剪裁";
+                }
             }
         }
 
         public void b_TextColor(object sender, EventArgs e)
         {
-            if (textColors == TextColor.ON)
+            lock(myLock)
             {
-                textColors = TextColor.OFF;
-                BTextColor.Text = "纹理";
-            }
-            else if (textColors == TextColor.OFF)
-            {
-                textColors = TextColor.ON;
-                BTextColor.Text = "颜色";
+                if (textColors == TextColor.ON)
+                {
+                    textColors = TextColor.OFF;
+                    BTextColor.Text = "纹理";
+                }
+                else if (textColors == TextColor.OFF)
+                {
+                    textColors = TextColor.ON;
+                    BTextColor.Text = "颜色";
+                }
             }
         }
 
 
         #endregion
-
-        #region 后处理
-        private void edgeTest(int u,int v)
-        {
-            float edge = Sobel(u, v);
-            //System.Drawing.Color withEdgeColor = lerp(System.Drawing.Color.White, frameArray[u, v], edge);
-            //System.Drawing.Color onlyColor = lerp(frameArray[u, v], System.Drawing.Color.Black, edge);
-            System.Drawing.Color c = frameArray[u, v];
-            frameBuff.SetPixel(u, v, System.Drawing.Color.FromArgb(number((int)Math.Abs((c.A * edge)),255),c.R,c.G,c.B));
-            //frameBuff.SetPixel(u, v, c);
-            
-        }
-        System.Drawing.Color lerp(System.Drawing.Color c1,System.Drawing.Color c2,float t)
-        { 
-            float R = c2.R * t + (1 - t) * c1.R;
-            float G = c2.G * t + (1 - t) * c1.G;
-            float B = c2.B * t + (1 - t) * c1.B;
-            return System.Drawing.Color.FromArgb(getInt(R), getInt(G), getInt(B));
-        }
-
-        int number(int x,int y)
-        {
-            while (x > y)
-            {
-                x = x - y;
-            }
-            //if(x>y)
-            //{
-            //    return 255;
-            //}
-            return x;
-        }
-
-        int getInt(float t)
-        {
-            if(t<0)
-            {
-                return 0;
-            }
-            else if(t>255)
-            {
-                return 255;
-            }
-            else
-            {
-                return (int)t;
-            }
-        }
-
-        float luminance(System.Drawing.Color color) {
-				return  (0.299f * color.R + 0.587f * color.G + 0.114f * color.B)/255f; 
-		}
-
-        float Sobel(int u,int v)
-        {
-             float []Gx = {-1,  0,  1,
-                                        -2,  0,  2,
-                                        -1,  0,  1};
-             float[] Gy = {-1, -2, -1,
-                                        0,  0,  0,
-                                        1,  2,  1};
-            int[] ux= {-1, 0,1,
-                                        -1,  0,  1,
-                                        -1,  0,  1};
-            int[] vx = {1, 1, 1,
-                                        0,  0,  0,
-                                        -1,  -1,  -1};
-
-            float texColor;
-            float edgeX = 0;
-            float edgeY = 0;
-            int uu = 0;
-            int vv = 0;
-            for (int it = 0; it < 9; it++)
-            {
-                uu = u + ux[it];
-                vv = v + vx[it];
-                if(uu>=0&&uu<width&&vv>=0&&vv<height)
-                {
-                    texColor = luminance(frameArray[uu,vv]);
-                    edgeX += texColor * Gx[it];
-                    edgeY += texColor * Gy[it];
-                }
-               
-            }
-
-            float edge = 1 - Math.Abs(edgeX) - Math.Abs(edgeY);
-            return edge;
-        }
-
-        private void edgeTest2(int u, int v)
-        {
-            float uu = u / (float)width;
-            float vv = v / (float)height;
-
-            System.Drawing.Color colorCenter = frameArray[u,v];
-
-            // Luma at the current fragment
-            float lumaCenter = luminance(colorCenter);
-
-            // Luma at the four direct neighbours of the current fragment.
-            float lumaDown = luminance(frameArray[u, v-1]);
-            float lumaUp = luminance(frameArray[u, v+1]);
-            float lumaLeft = luminance(frameArray[u-1, v]);
-            float lumaRight = luminance(frameArray[u+1,v]);
-
-            // Find the maximum and minimum luma around the current fragment.
-            float lumaMin = Math.Min(lumaCenter, Math.Min(Math.Min(lumaDown, lumaUp), Math.Min(lumaLeft, lumaRight)));
-            float lumaMax = Math.Max(lumaCenter, Math.Max(Math.Max(lumaDown, lumaUp), Math.Max(lumaLeft, lumaRight)));
-
-            // Compute the delta.
-            float lumaRange = lumaMax - lumaMin;
-            float EDGE_THRESHOLD_MIN = 0.0312f;
-            float EDGE_THRESHOLD_MAX = 0.125f;
-            // If the luma variation is lower that a threshold (or if we are in a really dark area), we are not on an edge, don't perform any AA.
-            if (lumaRange < Math.Max(EDGE_THRESHOLD_MIN, lumaMax * EDGE_THRESHOLD_MAX))
-            {
-                frameBuff.SetPixel(u, v, colorCenter);
-                return;
-            }
-
-            float lumaDownLeft = luminance(frameArray[u-1, v-1]);
-            float lumaUpRight = luminance(frameArray[u+1, v+1]);
-            float lumaUpLeft = luminance(frameArray[u-1,v+ 1]);
-            float lumaDownRight = luminance(frameArray[u+1, v-1]);
-
-            // Combine the four edges lumas (using intermediary variables for future computations with the same values).
-            float lumaDownUp = lumaDown + lumaUp;
-            float lumaLeftRight = lumaLeft + lumaRight;
-
-            // Same for corners
-            float lumaLeftCorners = lumaDownLeft + lumaUpLeft;
-            float lumaDownCorners = lumaDownLeft + lumaDownRight;
-            float lumaRightCorners = lumaDownRight + lumaUpRight;
-            float lumaUpCorners = lumaUpRight + lumaUpLeft;
-
-            // Compute an estimation of the gradient along the horizontal and vertical axis.
-            float edgeHorizontal = Math.Abs(-2.0f * lumaLeft + lumaLeftCorners) + Math.Abs(-2.0f * lumaCenter + lumaDownUp) * 2.0f + Math.Abs(-2.0f * lumaRight + lumaRightCorners);
-            float edgeVertical = Math.Abs(-2.0f * lumaUp + lumaUpCorners) + Math.Abs(-2.0f * lumaCenter + lumaLeftRight) * 2.0f + Math.Abs(-2.0f * lumaDown + lumaDownCorners);
-
-            // Is the local edge horizontal or vertical ?
-            bool isHorizontal = (edgeHorizontal >= edgeVertical);
-
-            float luma1 = isHorizontal ? lumaDown : lumaLeft;
-            float luma2 = isHorizontal ? lumaUp : lumaRight;
-            // Compute gradients in this direction.
-            float gradient1 = luma1 - lumaCenter;
-            float gradient2 = luma2 - lumaCenter;
-
-            // Which direction is the steepest ?
-            bool is1Steepest = Math.Abs(gradient1) >= Math.Abs(gradient2);
-
-            // Gradient in the corresponding direction, normalized.
-            float gradientScaled = 0.25f * Math.Max(Math.Abs(gradient1), Math.Abs(gradient2));
-
-
-            float inverseScreenSizex = 1 / (float)width;
-            float inverseScreenSizey = 1 / (float)height;
-            float stepLength = isHorizontal ? inverseScreenSizey : inverseScreenSizex;
-
-            // Average luma in the correct direction.
-            float lumaLocalAverage = 0.0f;
-
-            if (is1Steepest)
-            {
-                // Switch the direction
-                stepLength = -stepLength;
-                lumaLocalAverage = 0.5f * (luma1 + lumaCenter);
-            }
-            else
-            {
-                lumaLocalAverage = 0.5f * (luma2 + lumaCenter);
-            }
-
-            //// Shift UV in the correct direction by half a pixel.
-            UV currentUv = new UV(uu,vv);
-            if (isHorizontal)
-            {
-                currentUv.y += stepLength * 0.5f;
-            }
-            else
-            {
-                currentUv.x += stepLength * 0.5f;
-            }
-
-
-            UV offset = isHorizontal ? new UV(inverseScreenSizex, 0.0f) : new UV(0.0f, inverseScreenSizey);
-            // Compute UVs to explore on each side of the edge, orthogonally. The QUALITY allows us to step faster.
-            UV uv1 = currentUv - offset;
-            UV uv2 = currentUv + offset;
-
-            // Read the lumas at both current extremities of the exploration segment, and compute the delta wrt to the local average luma.
-            float lumaEnd1 =luminance(frameArray[(int)(System.Math.Round(uv1.x * width, MidpointRounding.AwayFromZero)), (int)(System.Math.Round((uv1.y * height), MidpointRounding.AwayFromZero))]);
-            float lumaEnd2 = luminance(frameArray[(int)(System.Math.Round(uv2.x * width, MidpointRounding.AwayFromZero)), (int)(System.Math.Round((uv2.y * height), MidpointRounding.AwayFromZero))]);
-            
-            lumaEnd1 -= lumaLocalAverage;
-            lumaEnd2 -= lumaLocalAverage;
-
-            // If the luma deltas at the current extremities are larger than the local gradient, we have reached the side of the edge.
-            bool reached1 = Math.Abs(lumaEnd1) >= gradientScaled;
-            bool reached2 = Math.Abs(lumaEnd2) >= gradientScaled;
-            bool reachedBoth = reached1 && reached2;
-
-            // If the side is not reached, we continue to explore in this direction.
-            if (!reached1)
-            {
-                uv1 -= offset;
-            }
-            if (!reached2)
-            {
-                uv2 += offset;
-            }
-
-
-            if (!reachedBoth)
-            {
-                float[] num = { 0.5f, 0.5f, 0.5f, 0.5f,1.5f, 1.5f, 1.5f };
-                for (int i = 2; i <9; i++)
-                {
-                    // If needed, read luma in 1st direction, compute delta.
-                    if (!reached1)
-                    {
-                        lumaEnd1 = luminance(frameArray[(int)(System.Math.Round(uv1.x * width, MidpointRounding.AwayFromZero)), (int)(System.Math.Round((uv1.y * height), MidpointRounding.AwayFromZero))]);
-                        lumaEnd1 = lumaEnd1 - lumaLocalAverage;
-                    }
-                    // If needed, read luma in opposite direction, compute delta.
-                    if (!reached2)
-                    {
-                        lumaEnd2 =luminance(frameArray[(int)(System.Math.Round(uv2.x * width, MidpointRounding.AwayFromZero)), (int)(System.Math.Round((uv2.y * height), MidpointRounding.AwayFromZero))]);
-                        lumaEnd2 = lumaEnd2 - lumaLocalAverage;
-                    }
-                    // If the luma deltas at the current extremities is larger than the local gradient, we have reached the side of the edge.
-                    reached1 = Math.Abs(lumaEnd1) >= gradientScaled;
-                    reached2 = Math.Abs(lumaEnd2) >= gradientScaled;
-                    reachedBoth = reached1 && reached2;
-
-                    // If the side is not reached, we continue to explore in this direction, with a variable quality.
-                    if (!reached1)
-                    {
-                        uv1 -= offset *num[i-2];
-                    }
-                    if (!reached2)
-                    {
-                        uv2 += offset * num[i - 2];
-                    }
-
-                    // If both sides have been reached, stop the exploration.
-                    if (reachedBoth) { break; }
-                }
-            }
-
-
-            float distance1 = isHorizontal ? (uu- uv1.x) : (vv - uv1.y);
-            float distance2 = isHorizontal ? (uv2.x - uu) : (uv2.y -vv);
-
-            // In which direction is the extremity of the edge closer ?
-            bool isDirection1 = distance1 < distance2;
-            float distanceFinal = Math.Min(distance1, distance2);
-
-            // Length of the edge.
-            float edgeThickness = (distance1 + distance2);
-
-            //中心的亮度是否小于当地的平均值？
-            bool isLumaCenterSmaller = lumaCenter < lumaLocalAverage;
-
-            //如果中心的亮度小于其邻域的亮度，则每端的增量亮度应为正（相同的变化）。
-            bool correctVariation1 =(lumaEnd1 < 0.0f)!= isLumaCenterSmaller;
-            bool correctVariation2 =(lumaEnd2 < 0.0f)!= isLumaCenterSmaller;
-
-            //仅将结果保持在边缘较近侧的方向上。
-            bool correctVariation = isDirection1 ?correctVariation1 :correctVariation2;
-
-
-            // UV offset: read in the direction of the closest side of the edge.
-            float pixelOffset = -distanceFinal / edgeThickness + 0.5f;
-
-            //bool isLumaCenterSmaller = lumaCenter < lumaLocalAverage;
-
-            //// If the luma at center is smaller than at its neighbour, the delta luma at each end should be positive (same variation).
-            //// (in the direction of the closer side of the edge.)
-            //bool correctVariation = ((isDirection1 ? lumaEnd1 : lumaEnd2) < 0.0f) != isLumaCenterSmaller;
-
-            // If the luma variation is incorrect, do not offset.
-            float finalOffset = correctVariation ? pixelOffset : 0.0f;
-
-            float lumaAverage = (1.0f / 12.0f) * (2.0f * (lumaDownUp + lumaLeftRight) + lumaLeftCorners + lumaRightCorners);
-            // Ratio of the delta between the global average and the center luma, over the luma range in the 3x3 neighborhood.
-            float subPixelOffset1 = clamp(Math.Abs(lumaAverage - lumaCenter) / lumaRange);
-            float subPixelOffset2 = (-2.0f * subPixelOffset1 + 3.0f) * subPixelOffset1 * subPixelOffset1;
-            // Compute a sub-pixel offset based on this delta.
-            float SUBPIXEL_QUALITY = 0.75f;
-            float subPixelOffsetFinal = subPixelOffset2 * subPixelOffset2 * SUBPIXEL_QUALITY;
-
-            // Pick the biggest of the two offsets.
-            finalOffset = Math.Max(finalOffset, subPixelOffsetFinal);
-
-            UV finalUv = new UV(uu,vv);
-            if (isHorizontal)
-            {
-                finalUv.y += finalOffset * stepLength;
-            }
-            else
-            {
-                finalUv.x += finalOffset * stepLength;
-            }
-
-            // Read the color at the new UV coordinates, and use it.
-            System.Drawing.Color finalColor = frameArray[(int)(System.Math.Round((finalUv.x * width), MidpointRounding.AwayFromZero)), (int)(System.Math.Round((finalUv.y * height), MidpointRounding.AwayFromZero))];
-           
-            frameBuff.SetPixel(u, v, new graphic_exercise.RenderData.Color(finalColor).TransFormToSystemColor());
-        }
-
-        float clamp(float x)
-        {
-            if(x<0)
-            {
-                return 0;
-            }
-            else if(x>1)
-            {
-                return 1;
-            }
-            return x;
-        }
-        #endregion
-
         #region 裁剪
-
-        /// <summary>
-        /// 近平面裁剪
-        /// </summary>
-        //private void clipTest_near(Vertex v1, Vertex v2, Vertex v3)
-        //{
-        //    指向立方体内部
-        //    Vector near_n = new Vector(0, 0, 1);
-        //    float distance = -camera.near;
-        //    插值因子
-        //    float t = 0;
-        //    点在法线上的投影
-        //    float projectV1 = Vector.dot(near_n, v1.pos);
-        //    float projectV2 = Vector.dot(near_n, v2.pos);
-        //    float projectV3 = Vector.dot(near_n, v3.pos);
-        //    点与点之间的距离
-        //    float dv1v2 = Math.Abs(projectV1 - projectV2);
-        //    float dv1v3 = Math.Abs(projectV1 - projectV3);
-        //    float dv2v3 = Math.Abs(projectV2 - projectV3);
-        //    点倒平面的距离
-        //    float pv1 = Math.Abs(projectV1 - distance);
-        //    float pv2 = Math.Abs(projectV2 - distance);
-        //    float pv3 = Math.Abs(projectV3 - distance);
-        //    t = pv2 / dv2v3;
-        //    v1,v2,v3都在立方体内
-        //    if (projectV1 > distance && projectV2 > distance && projectV3 > distance)
-        //    {
-        //        不做任何处理
-        //        drawTriangle2(v1, v2, v3);
-        //        clipTest_far(v1, v2, v3);
-        //    }
-        //    else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在外
-        //    {
-        //        Vertex temp2 = new Vertex();
-        //        t = pv2 / dv1v2;
-        //        temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
-        //        temp2.pos.z = distance;
-        //        temp2.pos.w = -distance;
-        //        Util.Util.lerp(temp2, v2, v1, t);
-
-        //        Vertex temp1 = new Vertex();
-        //        t = pv3 / dv1v3;
-        //        temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = -distance; ;
-        //        Util.Util.lerp(temp1, v3, v1, t);
-        //        画线或光栅化
-        //        Vertex temp3 = new Vertex();
-        //        Vertex temp4 = new Vertex();
-        //        Vertex.Clone(v2, temp3);
-        //        Vertex.Clone(temp1, temp4);
-        //        clipTest_far(temp1, temp2, v2);
-        //        clipTest_far(temp4, temp3, v3);
-
-
-        //    }
-        //    else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在外
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv1 / dv1v2;
-        //        temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = -distance; ;
-        //        Util.Util.lerp(temp1, v1, v2, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv3 / dv2v3;
-        //        temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = -distance; ;
-        //        Util.Util.lerp(temp2, v3, v2, t);
-        //        画线或光栅化
-        //        Vertex temp3 = new Vertex();
-        //        Vertex temp4 = new Vertex();
-        //        Vertex.Clone(v3, temp3);
-        //        Vertex.Clone(temp1, temp4);
-        //        clipTest_far(temp1, temp2, v3);
-        //        clipTest_far(temp4, temp3, v1);
-        //    }
-        //    else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在外
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv2 / dv2v3;
-        //        temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = -distance; ;
-        //        Util.Util.lerp(temp1, v2, v3, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv1 / dv1v3;
-        //        temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = -distance; ;
-        //        Util.Util.lerp(temp2, v1, v3, t);
-        //        画线或光栅化
-        //        Vertex temp3 = new Vertex();
-        //        Vertex temp4 = new Vertex();
-        //        Vertex.Clone(v1, temp3);
-        //        Vertex.Clone(temp1, temp4);
-        //        clipTest_far(temp1, temp2, v1);
-        //        clipTest_far(temp4, temp3, v2);
-        //    }
-
-        //    else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在内
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv1 / dv1v2;
-        //        temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = -distance; ;
-        //        Util.Util.lerp(temp1, v1, v2, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv1 / dv1v3;
-        //        temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = -distance; ;
-        //        Util.Util.lerp(temp2, v1, v3, t);
-        //        画线或光栅化
-        //        clipTest_far(temp1, temp2, v1);
-        //    }
-        //    else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在内
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv2 / dv2v3;
-        //        temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = -distance; ;
-        //        Util.Util.lerp(temp1, v2, v3, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv2 / dv1v2;
-        //        temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = -distance; ;
-        //        Util.Util.lerp(temp2, v2, v1, t);
-        //        画线或光栅化
-        //        clipTest_far(temp1, temp2, v2);
-        //    }
-        //    else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在内
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv3 / dv1v3;
-        //        temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = -distance; ;
-        //        Util.Util.lerp(temp1, v3, v1, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv3 / dv2v3;
-        //        temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = -distance; ;
-        //        Util.Util.lerp(temp2, v3, v2, t);
-        //        画线或光栅化
-        //        clipTest_far(temp1, temp2, v3);
-        //    }
-        //}
 
         private void clipTest_near(Vertex v1, Vertex v2, Vertex v3)
         {
@@ -3244,7 +2619,6 @@ namespace graphic_exercise
         }
 
         #endregion
-
 
 
 

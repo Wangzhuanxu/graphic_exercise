@@ -83,6 +83,16 @@ namespace graphic_exercise.RenderData
             return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
         }
         /// <summary>
+        /// 取反
+        /// </summary>
+        /// <param name="v">数值</param>
+        /// <returns></returns>
+        public static  Vector opposite(Vector v)
+        {
+            return new Vector(-v.x, -v.y, -v.z, v. w);
+        }
+
+        /// <summary>
         /// 向量相加
         /// </summary>
         /// <param name="v1"></param>
@@ -127,12 +137,16 @@ namespace graphic_exercise.RenderData
             float z = lhs.x * rhs.y - lhs.y * rhs.x;
             return new Vector(x, y, z);
         }
-
+        //克隆
         public  Vector clone()
         {
             return new Vector(x, y, z, w);
         }
 
-     
+        public override string ToString()
+        {
+            return x+"  "+y+"   "+z;
+        }
+
     }
 }
