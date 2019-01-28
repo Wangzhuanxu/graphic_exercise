@@ -99,7 +99,7 @@ namespace graphic_exercise.RenderData
             v2.material.gloss = v1.material.gloss;
 
             v2.onePerZ = v1.onePerZ;
-       
+            
         }
 
         public static void Clone(Vertex v1, Vertex v2)

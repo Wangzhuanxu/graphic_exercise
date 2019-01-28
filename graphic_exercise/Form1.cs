@@ -12,14 +12,12 @@ using System.Windows.Forms;
 using graphic_exercise.Util;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Collections.Generic;
 
 namespace graphic_exercise
 {
     public partial class Form1 : Form
     {
-        /// <summary>
-        /// 测试数据
-        /// </summary>
         Thread t;//刷帧率线程
         private Bitmap frameBuff;//用一张bitmap来做帧缓冲（颜色缓冲）       
         private Graphics frameG; //背景色画板
@@ -37,6 +35,10 @@ namespace graphic_exercise
         const int imgWidth = 256;//图片宽高
         const int imgHeight = 256;
         System.Drawing.Color[,] textureArray;//纹理颜色值
+
+        Queue<OneTriangle> clipQueue = new Queue<OneTriangle>();//裁剪列表
+        List<OneTriangle> rasterizationList = new List<OneTriangle>();//所要光栅化的三角形列表
+
         //屏幕宽高
         int width = 800+16;
         int height = 600+40;
@@ -169,35 +171,36 @@ namespace graphic_exercise
         /// <param name="m"></param>
         /// <param name="v"></param>
         /// <param name="p"></param>
-        Vertex p1=new Vertex();
-        Vertex p2=new Vertex();
-        Vertex p3=new Vertex();
+        Vertex p1;
+        Vertex p2;
+        Vertex p3;
         /// <summary>
         /// 主绘制方法
         /// </summary>
         private void draw(Matrix4x4 m, Matrix4x4 v, Matrix4x4 p)
         {
-            
+            //清空裁剪队列和绘制列表
+            clipQueue.Clear();
+            rasterizationList.Clear();
             for (int i = 0; i < triangles.vertexList.Count; i += 3)//遍历顶点索引数组
             {
+                p1 = new Vertex();
+                p2 = new Vertex();
+                p3 = new Vertex();
                 Vertex.Clone2(triangles.vertexList[i], p1);
                 Vertex.Clone2(triangles.vertexList[i + 1], p2);
                 Vertex.Clone2(triangles.vertexList[i + 2], p3);
                 drawTriangle(p1,
                    p2,
                     p3
-                    , m, v, p);
+                    , m, v, p);              
             }
-            //if (xiaoLinLine == WuXiaoLinLine.ON&& renderMode == RenderMode.Entity)
-            //{
-            //    for (int i = 1; i < width -1; i++)
-            //    {
-            //        for (int j = 1; j < height - 1; j++)
-            //        {
-            //        }
-            //    }
-            //}
-            
+            //遍历产生的所有的三角形
+            for(int i=0;i<rasterizationList.Count;i++)
+            {
+                //画线或者光栅化
+                drawTriangle2(rasterizationList[i].v1, rasterizationList[i].v2,rasterizationList[i].v3);
+            }
         }
         /// <summary>
         /// 绘制三角形
@@ -237,7 +240,7 @@ namespace graphic_exercise
             cameraToProject(p, v3);
 
             //TODO 简单剔除
-            if (clip(v1)==false&&clip(v2)==false&&clip(v3)==false)
+            if (exclude(v1)==false&& exclude(v2)==false&& exclude(v3)==false)
             {
                 return;
             }
@@ -250,15 +253,16 @@ namespace graphic_exercise
             //剪裁
             if (clipTest == ClipTest.ON)
             {
-                clipTest_near(v1, v2, v3);
+                clip(new OneTriangle(v1, v2, v3));
             }
             else
             {
-                drawTriangle2(v1, v2, v3);
+                //drawTriangle2(v1, v2, v3);
+                rasterizationList.Add(new OneTriangle(v1, v2, v3));
             }
         }
         /// <summary>
-        /// 不包含剪裁
+        /// 画线还是光栅化
         /// </summary>
         private void drawTriangle2(Vertex v1,Vertex v2,Vertex v3)
         {
@@ -283,13 +287,6 @@ namespace graphic_exercise
             {
                 //光栅化
                 rasterizationTriangle(v1, v2, v3);
-                if(xiaoLinLine==WuXiaoLinLine.ON)
-                {
-                    //WuXiaoLinDrawLine(v1, v2);
-                    //WuXiaoLinDrawLine(v2, v3);
-                    //WuXiaoLinDrawLine(v3, v1);
-                }
-               
             }
         }
         /// <summary>
@@ -320,7 +317,7 @@ namespace graphic_exercise
         /// <summary>
         /// TODO 三角形剔除操作
         /// </summary>
-        private bool clip(Vertex v)
+        private bool exclude(Vertex v)
         {
             if (v.pos.x>=-v.pos.w&&v.pos.x<=v.pos.w
                 && v.pos.y >= -v.pos.w && v.pos.y <= v.pos.w
@@ -330,7 +327,52 @@ namespace graphic_exercise
             }
             return false;
         }
-       
+        /// <summary>
+        /// 裁剪
+        /// </summary>
+        private void clip(OneTriangle ot)
+        {
+            bool isClip = false;
+            //加入一个三角形
+            clipQueue.Enqueue(ot);
+            OneTriangle triangle;
+            while(clipQueue.Count>0)
+            {
+                //取出
+                triangle = clipQueue.Dequeue();
+                ///裁剪测试
+                if(isClip==false)//前
+                {
+                    isClip=clipTest_front(triangle.v1, triangle.v2, triangle.v3);
+                }
+                if (isClip == false)//后
+                {
+                    isClip = clipTest_back(triangle.v1, triangle.v2, triangle.v3);
+                }
+                if (isClip == false)//左
+                {
+                    isClip = clipTest_left(triangle.v1, triangle.v2, triangle.v3);
+                }
+                if (isClip == false)//右
+                {
+                    isClip = clipTest_right(triangle.v1, triangle.v2, triangle.v3);
+                }
+                if (isClip == false)//上
+                {
+                    isClip = clipTest_top(triangle.v1, triangle.v2, triangle.v3);
+                }
+                if (isClip == false)//下
+                {
+                    isClip = clipTest_bottom(triangle.v1, triangle.v2, triangle.v3);
+                }
+                if(isClip==false)//不需要裁剪
+                {
+                    rasterizationList.Add(new OneTriangle(triangle.v1, triangle.v2, triangle.v3));
+                }
+                isClip = false;
+            }
+
+        }
         /// <summary>
         /// 透视除法
         /// </summary>
@@ -1121,7 +1163,6 @@ namespace graphic_exercise
         {
             if(i<0||i>imgWidth-1||j<0||j>imgHeight-1)
             {
-                Console.WriteLine("2324324");
                 return System.Drawing.Color.Black;
                 
             }
@@ -1171,13 +1212,6 @@ namespace graphic_exercise
             Vector n = Vector.cross(u,v);//计算法线
             //由于在视空间中，所以相机点就是（0,0,0）
             Vector viewDir =  v2.pos- new Vector(0, 0, 0);
-#if DEBUG
-            //Console.WriteLine(u.x + "   " + u.y + "    " + " " + u.z + "   "
-            //           + v.x + "   " + v.y + "    " + " " + v.z + "   " +
-            //           n.x + "   " + n.y + "    " + " " + n.z + "   " + "    " +
-            //           viewDir.x + "   " + viewDir.y + "    " + " " + viewDir.z + "   " + Vector.dot(n, viewDir));
-#endif
-
             if (Vector.dot(n, viewDir) > 0)
             {
                 //夹角小于90度
@@ -1338,7 +1372,6 @@ namespace graphic_exercise
                     }
                 }
             }
-
             if (canMove)
             {
 
@@ -1375,30 +1408,20 @@ namespace graphic_exercise
             if (keyData == Keys.W)
             {
                 camera.pos += N*0.1f;
-                //camera.pos.z += 0.1f;
-                //camera.look.z += 0.1f;
-                //Console.WriteLine("前进");
             }
             else if(keyData == Keys.S)
             {
                 camera.pos -= N * 0.1f;
-                //camera.pos.z -= 0.1f;
-                //camera.look.z -= 0.1f;
-                //Console.WriteLine("后退");
             }
             else if (keyData == Keys.A)
             {
                 camera.pos -= U * 0.1f;
-                //camera.pos.x -= 0.1f;
                 camera.look -= U * 0.1f;
-                //Console.WriteLine("左移");
             }
             else if (keyData == Keys.D)
             {
                 camera.pos += U * 0.1f;
-                //camera.pos.x += 0.1f;
                 camera.look+= U * 0.1f;
-                //Console.WriteLine("右移");
             }
             else if (keyData == Keys.Q)
             {
@@ -1521,7 +1544,7 @@ namespace graphic_exercise
         #endregion
         #region 裁剪
 
-        private void clipTest_near(Vertex v1, Vertex v2, Vertex v3)
+        private bool clipTest_front(Vertex v1, Vertex v2, Vertex v3)
         {
             //指向立方体内部
             Vector near_n = new Vector(0, 0, 1);
@@ -1545,8 +1568,7 @@ namespace graphic_exercise
             if (projectV1 > distance && projectV2 > distance && projectV3 > distance)
             {
                 //不做任何处理
-                //drawTriangle2(v1, v2, v3);
-                clipTest_far(v1, v2, v3);
+                return false;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在外
             {
@@ -1570,11 +1592,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_far(temp1, temp2, v2);
-                clipTest_far(temp4, temp3, v3);
-                //drawTriangle2(temp1, temp2, v2);
-                //drawTriangle2(temp4, temp3, v3);
-
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                return true;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在外
             {
@@ -1599,10 +1619,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_far(temp1, temp2, v3);
-                clipTest_far(temp4, temp3, v1);
-                //drawTriangle2(temp1, temp2, v3);
-                //drawTriangle2(temp4, temp3, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在外
             {
@@ -1626,10 +1645,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_far(temp1, temp2, v1);
-                clipTest_far(temp4, temp3, v2);
-                //drawTriangle2(temp1, temp2, v1);
-                //drawTriangle2(temp4, temp3, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                return true;
             }
 
             else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在内
@@ -1650,8 +1668,8 @@ namespace graphic_exercise
                 temp2.pos.w = -distance; ;
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
-                clipTest_far(temp1, temp2, v1);
-                //drawTriangle2(temp1, temp2, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在内
             {
@@ -1671,8 +1689,8 @@ namespace graphic_exercise
                 temp2.pos.w = -distance; ;
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                clipTest_far(temp1, temp2, v2);
-                //drawTriangle2(temp1, temp2, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在内
             {
@@ -1692,179 +1710,13 @@ namespace graphic_exercise
                 temp2.pos.w = -distance; ;
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                clipTest_far(temp1, temp2, v3);
-                //drawTriangle2(temp1, temp2, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                return true;
             }
+            return false;
         }
 
-        ///// <summary>
-        ///// 远剪裁平面
-        ///// </summary>
-        //private void clipTest_far(Vertex v1, Vertex v2, Vertex v3)
-        //{
-
-        //    //指向立方体内部
-        //    Vector far_n = new Vector(0, 0, 1);
-        //    float distance = camera.far;
-        //    //插值因子
-        //    float t = 0;
-        //    //点在法线上的投影
-        //    float projectV1 = Vector.dot(far_n, v1.pos);
-        //    float projectV2 = Vector.dot(far_n, v2.pos);
-        //    float projectV3 = Vector.dot(far_n, v3.pos);
-        //    //点与点之间的距离
-        //    float dv1v2 = Math.Abs(projectV1 - projectV2);
-        //    float dv1v3 = Math.Abs(projectV1 - projectV3);
-        //    float dv2v3 = Math.Abs(projectV2 - projectV3);
-        //    //颠倒平面的距离
-        //    float pv1 = Math.Abs(projectV1 - distance);
-        //    float pv2 = Math.Abs(projectV2 - distance);
-        //    float pv3 = Math.Abs(projectV3 - distance);
-        //    //v1,v2,v3都在立方体内
-        //    if (projectV1 < distance && projectV2 < distance && projectV3 < distance)
-        //    {
-        //        //不做任何处理
-        //        drawTriangle2(v1, v2, v3);
-        //    }
-        //    else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在外
-        //    {
-        //        Vertex temp2 = new Vertex();
-        //        t = pv2 / dv1v2;
-        //        temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = distance; ;
-        //        Util.Util.lerp(temp2, v2, v1, t);
-
-        //        Vertex temp1 = new Vertex();
-        //        t = pv3 / dv1v3;
-        //        temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = distance; ;
-        //        Util.Util.lerp(temp1, v3, v1, t);
-        //        //画线或光栅化
-        //        Vertex temp3 = new Vertex();
-        //        Vertex temp4 = new Vertex();
-        //        Vertex.Clone(v2, temp3);
-        //        Vertex.Clone(temp1, temp4);
-        //        drawTriangle2(temp1, temp2, v2);
-        //        drawTriangle2(temp4, temp3, v3);
-        //    }
-        //    else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在外
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv1 / dv1v2;
-        //        temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = distance; ;
-        //        Util.Util.lerp(temp1, v1, v2, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv3 / dv2v3;
-        //        temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = distance; ;
-        //        Util.Util.lerp(temp2, v3, v2, t);
-        //        //画线或光栅化
-        //        Vertex temp3 = new Vertex();
-        //        Vertex temp4 = new Vertex();
-        //        Vertex.Clone(v3, temp3);
-        //        Vertex.Clone(temp1, temp4);
-        //        drawTriangle2(temp1, temp2, v3);
-        //        drawTriangle2(temp4, temp3, v1);
-        //    }
-        //    else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在外
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv2 / dv2v3;
-        //        temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = distance; ;
-        //        Util.Util.lerp(temp1, v2, v3, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv1 / dv1v3;
-        //        temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = distance; ;
-        //        Util.Util.lerp(temp2, v1, v3, t);
-        //        //画线或光栅化
-        //        Vertex temp3 = new Vertex();
-        //        Vertex temp4 = new Vertex();
-        //        Vertex.Clone(v1, temp3);
-        //        Vertex.Clone(temp1, temp4);
-        //        drawTriangle2(temp1, temp2, v1);
-        //        drawTriangle2(temp4, temp3, v2);
-        //    }
-
-        //    else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在内
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv1 / dv1v2;
-        //        temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = distance; ;
-        //        Util.Util.lerp(temp1, v1, v2, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv1 / dv1v3;
-        //        temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = distance; ;
-        //        Util.Util.lerp(temp2, v1, v3, t);
-        //        //画线或光栅化
-        //        drawTriangle2(temp1, temp2, v1);
-        //    }
-        //    else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在内
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv2 / dv2v3;
-        //        temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = distance; ;
-        //        Util.Util.lerp(temp1, v2, v3, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv2 / dv1v2;
-        //        temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = distance; ;
-        //        Util.Util.lerp(temp2, v2, v1, t);
-        //        //画线或光栅化
-        //        drawTriangle2(temp1, temp2, v2);
-        //    }
-        //    else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在内
-        //    {
-        //        Vertex temp1 = new Vertex();
-        //        t = pv3 / dv1v3;
-        //        temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
-        //        temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
-        //        temp1.pos.z = distance; ;
-        //        temp1.pos.w = distance; ;
-        //        Util.Util.lerp(temp1, v3, v1, t);
-
-        //        Vertex temp2 = new Vertex();
-        //        t = pv3 / dv2v3;
-        //        temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
-        //        temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
-        //        temp2.pos.z = distance; ;
-        //        temp2.pos.w = distance; ;
-        //        Util.Util.lerp(temp2, v3, v2, t);
-        //        //画线或光栅化
-        //        drawTriangle2(temp1, temp2, v3);
-        //    }
-        //}
-
-        private void clipTest_far(Vertex v1, Vertex v2, Vertex v3)
+        private bool clipTest_back(Vertex v1, Vertex v2, Vertex v3)
         {
 
             //指向立方体内部
@@ -1889,7 +1741,7 @@ namespace graphic_exercise
             if (projectV1 < distance && projectV2 < distance && projectV3 < distance)
             {
                 //不做任何处理
-                clipTest_left(v1, v2, v3);
+                return false;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在外
             {
@@ -1913,8 +1765,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_left(temp1, temp2, v2);
-                clipTest_left(temp4, temp3, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在外
             {
@@ -1938,8 +1791,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_left(temp1, temp2, v3);
-                clipTest_left(temp4, temp3, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在外
             {
@@ -1963,8 +1817,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_left(temp1, temp2, v1);
-                clipTest_left(temp4, temp3, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                return true;
             }
 
             else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在内
@@ -1985,7 +1840,8 @@ namespace graphic_exercise
                 temp2.pos.w = distance; ;
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
-                clipTest_left(temp1, temp2, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                return true;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在内
             {
@@ -2005,7 +1861,8 @@ namespace graphic_exercise
                 temp2.pos.w = distance; ;
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                clipTest_left(temp1, temp2, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在内
             {
@@ -2025,11 +1882,13 @@ namespace graphic_exercise
                 temp2.pos.w = distance; ;
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                clipTest_left(temp1, temp2, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                return true;
             }
+            return false;
         }
 
-        private void clipTest_left(Vertex v1, Vertex v2, Vertex v3)
+        private bool clipTest_left(Vertex v1, Vertex v2, Vertex v3)
         {
             //指向立方体内部
             Vector left = new Vector(1, 0, 0);
@@ -2052,8 +1911,7 @@ namespace graphic_exercise
             if (projectV1 > distance && projectV2 > distance && projectV3 > distance)
             {
                 //不做任何处理
-                clipTest_right(v1, v2, v3);
-                //clipTest_far(v1, v2, v3);
+                return false;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在外
             {
@@ -2073,10 +1931,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                //clipTest_far(temp1, temp2, v2);
-                //clipTest_far(temp4, temp3, v3);
-                clipTest_right(temp1, temp2, v2);
-                clipTest_right(temp4, temp3, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                return true;
 
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在外
@@ -2097,10 +1954,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                //clipTest_far(temp1, temp2, v3);
-                //clipTest_far(temp4, temp3, v1);
-                clipTest_right(temp1, temp2, v3);
-                clipTest_right(temp4, temp3, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在外
             {
@@ -2120,10 +1976,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                //clipTest_far(temp1, temp2, v1);
-                //clipTest_far(temp4, temp3, v2);
-                clipTest_right(temp1, temp2, v1);
-                clipTest_right(temp4, temp3, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                return true;
             }
 
             else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在内
@@ -2140,8 +1995,8 @@ namespace graphic_exercise
                 temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
-                // clipTest_far(temp1, temp2, v1);
-                clipTest_right(temp1, temp2, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在内
             {
@@ -2157,8 +2012,8 @@ namespace graphic_exercise
                 temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                //clipTest_far(temp1, temp2, v2);
-                clipTest_right(temp1, temp2, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在内
             {
@@ -2174,13 +2029,13 @@ namespace graphic_exercise
                 temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                //clipTest_far(temp1, temp2, v3);
-                clipTest_right(temp1, temp2, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                return true;
             }
+            return false;
         }
 
-
-        private void clipTest_right(Vertex v1, Vertex v2, Vertex v3)
+        private bool clipTest_right(Vertex v1, Vertex v2, Vertex v3)
         {
 
             //指向立方体内部
@@ -2205,7 +2060,7 @@ namespace graphic_exercise
             if (projectV1 < distance && projectV2 < distance && projectV3 < distance)
             {
                 //不做任何处理
-                clipTest_top(v1, v2, v3);
+                return false;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在外
             {
@@ -2225,8 +2080,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_top(temp1, temp2, v2);
-                clipTest_top(temp4, temp3, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在外
             {
@@ -2236,7 +2092,6 @@ namespace graphic_exercise
                 temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
                 Util.Util.lerp(temp1, v1, v2, t);
 
-                //Console.WriteLine(v1.pos.x + "  " + v1.pos.y + "  " + v2.pos.x + "  " + v2.pos.y + "   " + temp1.pos.x + "  " + temp1.pos.y+"  v2在外");
                 Vertex temp2 = new Vertex();
                 t = pv3 / dv2v3;
                 temp2.pos.x = distance;
@@ -2247,8 +2102,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_top(temp1, temp2, v3);
-                clipTest_top(temp4, temp3, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在外
             {
@@ -2268,8 +2124,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_top(temp1, temp2, v1);
-                clipTest_top(temp4, temp3, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                return true;
             }
 
             else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在内
@@ -2285,9 +2142,8 @@ namespace graphic_exercise
                 temp2.pos.x = distance;
                 temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
                 Util.Util.lerp(temp2, v1, v3, t);
-                //Console.WriteLine(v1.pos.x + "  " + v1.pos.y + "  " + v3.pos.x + "  " + v3.pos.y + "   " + temp2.pos.x + "  " + temp2.pos.y + "  v1在内");
-                //画线或光栅化
-                clipTest_top(temp1, temp2, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                return true;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在内
             {
@@ -2303,7 +2159,8 @@ namespace graphic_exercise
                 temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                clipTest_top(temp1, temp2, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在内
             {
@@ -2319,12 +2176,13 @@ namespace graphic_exercise
                 temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                clipTest_top(temp1, temp2, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                return true;
             }
+            return false;
         }
 
-
-        private void clipTest_top(Vertex v1, Vertex v2, Vertex v3)
+        private bool clipTest_top(Vertex v1, Vertex v2, Vertex v3)
         {
             //指向立方体内部
             Vector near_n = new Vector(0, 1, 0);
@@ -2348,8 +2206,7 @@ namespace graphic_exercise
             if (projectV1 > distance && projectV2 > distance && projectV3 > distance)
             {
                 //不做任何处理
-                //drawTriangle2(v1, v2, v3);
-                clipTest_bottom(v1, v2, v3);
+                return false;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在外
             {
@@ -2369,11 +2226,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_bottom(temp1, temp2, v2);
-                clipTest_bottom(temp4, temp3, v3);
-                //drawTriangle2(temp1, temp2, v2);
-                //drawTriangle2(temp4, temp3, v3);
-
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                return true;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在外
             {
@@ -2394,10 +2249,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_bottom(temp1, temp2, v3);
-                clipTest_bottom(temp4, temp3, v1);
-                //drawTriangle2(temp1, temp2, v3);
-                //drawTriangle2(temp4, temp3, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在外
             {
@@ -2417,10 +2271,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipTest_bottom(temp1, temp2, v1);
-                clipTest_bottom(temp4, temp3, v2);
-                //drawTriangle2(temp1, temp2, v1);
-                //drawTriangle2(temp4, temp3, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                return true;
             }
 
             else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在内
@@ -2437,8 +2290,8 @@ namespace graphic_exercise
                 temp2.pos.y = distance;
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
-                clipTest_bottom(temp1, temp2, v1);
-                //drawTriangle2(temp1, temp2, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在内
             {
@@ -2454,8 +2307,8 @@ namespace graphic_exercise
                 temp2.pos.y = distance;
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                clipTest_bottom(temp1, temp2, v2);
-                //drawTriangle2(temp1, temp2, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在内
             {
@@ -2471,12 +2324,13 @@ namespace graphic_exercise
                 temp2.pos.y = distance;
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                clipTest_bottom(temp1, temp2, v3);
-                //drawTriangle2(temp1, temp2, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                return true;
             }
+            return false;
         }
 
-        private void clipTest_bottom(Vertex v1, Vertex v2, Vertex v3)
+        private bool clipTest_bottom(Vertex v1, Vertex v2, Vertex v3)
         {
 
             //指向立方体内部
@@ -2501,7 +2355,7 @@ namespace graphic_exercise
             if (projectV1 < distance && projectV2 < distance && projectV3 < distance)
             {
                 //不做任何处理
-                drawTriangle2(v1, v2, v3);
+                return false;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 < distance)//只有v1在外
             {
@@ -2521,8 +2375,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                drawTriangle2(temp1, temp2, v2);
-                drawTriangle2(temp4, temp3, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在外
             {
@@ -2542,8 +2397,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                drawTriangle2(temp1, temp2, v3);
-                drawTriangle2(temp4, temp3, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在外
             {
@@ -2563,8 +2419,9 @@ namespace graphic_exercise
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                drawTriangle2(temp1, temp2, v1);
-                drawTriangle2(temp4, temp3, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                return true;
             }
 
             else if (projectV1 < distance && projectV2 > distance && projectV3 > distance)//只有v1在内
@@ -2581,7 +2438,8 @@ namespace graphic_exercise
                 temp2.pos.y = distance;
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
-                drawTriangle2(temp1, temp2, v1);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                return true;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在内
             {
@@ -2597,7 +2455,8 @@ namespace graphic_exercise
                 temp2.pos.y = distance;
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                drawTriangle2(temp1, temp2, v2);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在内
             {
@@ -2614,8 +2473,10 @@ namespace graphic_exercise
 
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                drawTriangle2(temp1, temp2, v3);
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                return true;
             }
+            return false;
         }
 
         #endregion

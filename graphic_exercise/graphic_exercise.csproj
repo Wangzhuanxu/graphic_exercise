@@ -59,6 +59,7 @@
     <Compile Include="RenderData\Light.cs" />
     <Compile Include="RenderData\Material.cs" />
     <Compile Include="RenderData\Matrix4x4.cs" />
+    <Compile Include="RenderData\OneTriangle.cs" />
     <Compile Include="RenderData\Triangle.cs" />
     <Compile Include="RenderData\UV.cs" />
     <Compile Include="RenderData\Vector.cs" />
