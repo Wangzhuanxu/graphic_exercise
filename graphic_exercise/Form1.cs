@@ -294,13 +294,7 @@ namespace graphic_exercise
                 return true;
             }
             return false;
-        }
-        /// <summary>
-        /// 裁剪
-        /// 如果中途三角形被裁减，会返回true，新的三角形会被添加到clipQueue中，
-        /// 若没有被裁剪，会添加到最终绘制的list
-        /// </summary>
-       
+        }      
         /// <summary>
         /// 透视除法
         /// </summary>
@@ -327,7 +321,6 @@ namespace graphic_exercise
                 v.lightColor *= v.onePerZ;
             }
         }
-
         #region 画线
         /// <summary>
         /// 画线框
@@ -720,7 +713,6 @@ namespace graphic_exercise
                 }
                 else
                 {
-
                     //平底
                     drawTriangleBottom(v3, v1, v2);
                 }
@@ -749,7 +741,6 @@ namespace graphic_exercise
                 }
                 else
                 {
-
                     //平底
                     drawTriangleBottom(v1, v2, v3);
                 }
@@ -798,7 +789,6 @@ namespace graphic_exercise
                     middle = v3;
                     bottom = v2;
                 }
-
                 //插值求中间点x
                 float middlex = (middle.pos.y - top.pos.y) * (bottom.pos.x - top.pos.x) / (bottom.pos.y - top.pos.y) + top.pos.x;
                 //求插值因子
@@ -809,8 +799,6 @@ namespace graphic_exercise
                 new1.pos.y = middle.pos.y;
                 //插值
                 Util.Util.lerp(new1, top, bottom, t);
-
-
                 ////平底
                 if (middlex > middle.pos.x)
                 {
@@ -822,19 +810,10 @@ namespace graphic_exercise
                     drawTriangleBottom(top, middle, new1);
                     drawTriangleTop(new1, middle, bottom);
                 }
-                ////平顶
-
             }
         }
         private void drawTriangleBottom(Vertex v1, Vertex v2, Vertex v3)
         {
-            //int x1 = (int)(System.Math.Round(v1.pos.x, MidpointRounding.AwayFromZero));
-            //int x2 = (int)(System.Math.Round(v2.pos.x, MidpointRounding.AwayFromZero));
-            //int x3 = (int)(System.Math.Round(v3.pos.x, MidpointRounding.AwayFromZero));
-            //int y1 = (int)(System.Math.Round(v1.pos.y, MidpointRounding.AwayFromZero));
-            //int y2 = (int)(System.Math.Round(v2.pos.y, MidpointRounding.AwayFromZero));
-            //int y3 = (int)(System.Math.Round(v3.pos.y, MidpointRounding.AwayFromZero));
-
             int x1 = (int)(System.Math.Ceiling(v1.pos.x));
             int x2 = (int)(System.Math.Ceiling(v2.pos.x));
             int x3 = (int)(System.Math.Ceiling(v3.pos.x));
@@ -846,8 +825,6 @@ namespace graphic_exercise
             for (int y = y1; y < y3; y += 1)
             {
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
-                // int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
-                // int yIndex = y;// (int)Math.Ceiling(y);
                 //裁剪掉屏幕外的线
                 if (y >= 0 && y < height)
                 {
@@ -882,13 +859,6 @@ namespace graphic_exercise
         }
         private void drawTriangleTop(Vertex v1, Vertex v2, Vertex v3)
         {
-            //int x1 = (int)(System.Math.Round(v1.pos.x, MidpointRounding.AwayFromZero));
-            //int x2 = (int)(System.Math.Round(v2.pos.x, MidpointRounding.AwayFromZero));
-            //int x3 = (int)(System.Math.Round(v3.pos.x, MidpointRounding.AwayFromZero));
-            //int y1 = (int)(System.Math.Round(v1.pos.y, MidpointRounding.AwayFromZero));
-            //int y2 = (int)(System.Math.Round(v2.pos.y, MidpointRounding.AwayFromZero));
-            //int y3 = (int)(System.Math.Round(v3.pos.y, MidpointRounding.AwayFromZero));
-
             int x1 = (int)(System.Math.Ceiling(v1.pos.x));
             int x2 = (int)(System.Math.Ceiling(v2.pos.x));
             int x3 = (int)(System.Math.Ceiling(v3.pos.x));
@@ -900,8 +870,6 @@ namespace graphic_exercise
             for (int y = y1; y < y3; y += 1)
             {
                 //防止浮点数精度不准，四舍五入，使y的值每次增加1
-                //int yIndex = (int)(System.Math.Round(y, MidpointRounding.AwayFromZero));
-                // int yIndex = y;// (int)Math.Ceiling(y);
                 //裁剪掉屏幕外的线
                 if (y >= 0 && y < height)
                 {
@@ -941,19 +909,8 @@ namespace graphic_exercise
         /// <param name="yIndex">y值</param>
         private void scanLine(Vertex left, Vertex right, int yIndex,int xl,int xr)
         {
-            //求线段长度
-            //int x = (int)(System.Math.Round(left.pos.x, MidpointRounding.AwayFromZero));
-            //int dx = (int)(System.Math.Round(right.pos.x - left.pos.x, MidpointRounding.AwayFromZero));
-            //int x = (int)(System.Math.Ceiling(left.pos.x));
-            //int dx = (int)(System.Math.Ceiling(right.pos.x - left.pos.x));
-
             int x = xl;
             int dx = xr - xl;
-
-            //int x = (int)(System.Math.Ceiling(left.pos.x));
-            //int x2= (int)(System.Math.Ceiling(right.pos.x));
-            //int dx = x2 - x;
-
             int stepx = 1;
             //求w缓冲系数
             float w = 0;
@@ -964,13 +921,11 @@ namespace graphic_exercise
             //uv坐标
             int u = 0;
             int v = 0;
-
             int max = dx;
             if(max==0)
             {
                 max = 9999;
             }  
-
             for (int i = 0; i <=dx; i +=1)
             {
                 t = i / (float)max;
@@ -1081,12 +1036,8 @@ namespace graphic_exercise
             Vector halfDir = (worldView + worldLight).normalize();
             //高光
             graphic_exercise.RenderData.Color specular = light.LightColor * v1.material.specular * (float)Math.Pow(Math.Max(0, Vector.dot(worldNormal, halfDir)), v1.material.gloss);
-#if DEBUG
-            //Console.WriteLine(specular.r + " " + specular.g + "  " + specular.b);
-#endif
             //顶点颜色
             v1.lightColor = ambient + diffuse + specular;
-            //Console.WriteLine(diffuse.r + "  " + diffuse.g + "  " + diffuse.b + "  " + diffuse.a);
         }
         /// <summary>
         /// 背面消隐，裁剪摄像机不可见的面,加快渲染效率,顺序必须是逆时针顺序
