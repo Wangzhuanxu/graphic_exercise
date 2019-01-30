@@ -1394,7 +1394,7 @@ namespace graphic_exercise
                 new Vector(0,-1,0)//下
         };
         float[] distance = new float[] { -1, -1, 0f, -799, 0f, -599 };//各个平面到原点“距离”
-        bool[] isfront = { true, false, false, false, false, false };//是否是近平面剪裁
+        //bool[] isfront = { true, false, false, false, false, false };//是否是近平面剪裁
         //裁剪方法
         private void clip(OneTriangle ot)
         {
@@ -1406,11 +1406,13 @@ namespace graphic_exercise
             {
                 //取出
                 triangle = clipQueue.Dequeue();
-                for (int i = 0; i < distance.Length; i++)
+                //i代表将裁剪那个平面，默认都是从近平面开始，若该三角形被前面的面（近平面）裁剪，
+                //其产生的子三角形将从后面的面（原平面）裁剪
+                for (int i = triangle.startIndex; i < distance.Length; i++)
                 {
                     if (isClip == false)
                     {
-                        isClip = clip_Test(triangle.v1, triangle.v2, triangle.v3, dotVectors[i], distance[i], isfront[i]);
+                        isClip = clip_Test(triangle.v1, triangle.v2, triangle.v3, dotVectors[i], distance[i],i);
                     }
                     else
                     {
@@ -1422,49 +1424,9 @@ namespace graphic_exercise
                     rasterizationList.Add(new OneTriangle(triangle.v1, triangle.v2, triangle.v3));
                 }
                 isClip = false;
-                // Console.WriteLine(clipQueue.Count);
             }
         }
-        float errorInterval = 0.01f;//误差区间
-        /// <summary>
-        /// 消除插值误差，xy方向
-        /// </summary>
-        ///   /// <param name="n1">插值后顶点x/y值</param>
-        /// <param name="n2">上/下/左/右平面位置</param>
-        /// <returns>消除误差后顶点x/y值</returns>
-        float eliminateErrors(float n1,float n2)
-        {
-            if(Math.Abs(n1+n2)<errorInterval)
-            {
-                n1 = -n2;
-            }
-            return n1;
-        }
-       /// <summary>
-       /// 消除误差
-       /// </summary>
-       /// <param name="n1">插值后顶点z值</param>
-       /// <param name="n2">远/近平面位置</param>
-       /// <param name="isfront">是否时近剪裁平面剪裁</param>
-       /// <returns>消除误差后顶点z值</returns>
-        float eliminateErrors2(float n1, float n2,bool isfront)
-        {
-            if (isfront)//近平面
-            {
-                if (Math.Abs(n1 - n2) < errorInterval)
-                {
-                    n1 = n2;
-                }
-            }
-            else
-            {
-                if (Math.Abs(n1 + n2) < errorInterval)
-                {
-                    n1 = -n2;
-                }
-            }
-            return n1;
-        }
+
         /// <summary>
         /// 裁剪主方法
         /// </summary>
@@ -1473,9 +1435,9 @@ namespace graphic_exercise
         /// <param name="v3">顶点</param>
         /// <param name="dotVector">点积向量，求顶点到平面的距离</param>
         /// <param name="distance">平面“位置”</param>
-        /// <param name="isfront">是否是近平面剪裁</param>
+        /// <param name="startIndex">当前裁剪的是那个平面，其裁剪产生的子三角形将从下一个平面开始裁剪</param>
         /// <returns>是否被裁剪</returns>
-        private bool clip_Test(Vertex v1, Vertex v2, Vertex v3,Vector dotVector,float distance,bool isfront)
+        private bool clip_Test(Vertex v1, Vertex v2, Vertex v3,Vector dotVector,float distance,int startIndex)
         {
             //插值因子
             float t = 0;
@@ -1502,73 +1464,73 @@ namespace graphic_exercise
             {
                 Vertex temp2 = new Vertex();
                 t = pv2 / dv1v2;
-                temp2.pos.x =eliminateErrors( Util.Util.lerp(v2.pos.x, v1.pos.x, t),distance);
-                temp2.pos.y =eliminateErrors( Util.Util.lerp(v2.pos.y, v1.pos.y, t),distance);
-                temp2.pos.z = eliminateErrors2(Util.Util.lerp(v2.pos.z, v1.pos.z, t),distance,isfront);
+                temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
+                temp2.pos.z =Util.Util.lerp(v2.pos.z, v1.pos.z, t);
               
                 Util.Util.lerp(temp2, v2, v1, t);
                 Vertex temp1 = new Vertex();
                 t = pv3 / dv1v3;
-                temp1.pos.x = eliminateErrors(Util.Util.lerp(v3.pos.x, v1.pos.x, t), distance);
-                temp1.pos.y = eliminateErrors(Util.Util.lerp(v3.pos.y, v1.pos.y, t), distance);
-                temp1.pos.z = eliminateErrors2(Util.Util.lerp(v3.pos.z, v1.pos.z, t), distance, isfront);
+                temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
+                temp1.pos.z = Util.Util.lerp(v3.pos.z, v1.pos.z, t);
                 Util.Util.lerp(temp1, v3, v1, t);
                 //画线或光栅化
                 Vertex temp3 = new Vertex();
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v2, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
-                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3));
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2,startIndex+1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v3, startIndex + 1));
                 return true;
             }
             else if (projectV1 > distance && projectV2 < distance && projectV3 > distance)//只有v2在外
             {
                 Vertex temp1 = new Vertex();
                 t = pv1 / dv1v2;
-                temp1.pos.x = eliminateErrors(Util.Util.lerp(v1.pos.x, v2.pos.x, t),distance);
-                temp1.pos.y = eliminateErrors(Util.Util.lerp(v1.pos.y, v2.pos.y, t),distance);
-                temp1.pos.z = eliminateErrors2(Util.Util.lerp(v1.pos.z, v2.pos.z, t), distance, isfront);
+                temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
+                temp1.pos.y =Util.Util.lerp(v1.pos.y, v2.pos.y, t);
+                temp1.pos.z = Util.Util.lerp(v1.pos.z, v2.pos.z, t);
                 Util.Util.lerp(temp1, v1, v2, t);
 
 
                 Vertex temp2 = new Vertex();
                 t = pv3 / dv2v3;
-                temp2.pos.x = eliminateErrors(Util.Util.lerp(v3.pos.x, v2.pos.x, t), distance);
-                temp2.pos.y = eliminateErrors(Util.Util.lerp(v3.pos.y, v2.pos.y, t),distance);
-                temp2.pos.z = eliminateErrors2(Util.Util.lerp(v3.pos.z, v2.pos.z, t), distance, isfront);
+                temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
+                temp2.pos.y =Util.Util.lerp(v3.pos.y, v2.pos.y, t);
+                temp2.pos.z =Util.Util.lerp(v3.pos.z, v2.pos.z, t);
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
                 Vertex temp3 = new Vertex();
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v3, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
-                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1));
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3,startIndex+1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v1,startIndex+1));
                 return true;
             }
             else if (projectV1 > distance && projectV2 > distance && projectV3 < distance)//只有v3在外
             {
                 Vertex temp1 = new Vertex();
                 t = pv2 / dv2v3;
-                temp1.pos.x = eliminateErrors(Util.Util.lerp(v2.pos.x, v3.pos.x, t),distance);
-                temp1.pos.y = eliminateErrors(Util.Util.lerp(v2.pos.y, v3.pos.y, t),distance);
-                temp1.pos.z = eliminateErrors2(Util.Util.lerp(v2.pos.z, v3.pos.z, t), distance, isfront);
+                temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
+                temp1.pos.z = Util.Util.lerp(v2.pos.z, v3.pos.z, t);
                 Util.Util.lerp(temp1, v2, v3, t);
 
                 Vertex temp2 = new Vertex();
                 t = pv1 / dv1v3;
-                temp2.pos.x = eliminateErrors(Util.Util.lerp(v1.pos.x, v3.pos.x, t),distance);
-                temp2.pos.y = eliminateErrors(Util.Util.lerp(v1.pos.y, v3.pos.y, t),distance);
-                temp2.pos.z = eliminateErrors2(Util.Util.lerp(v1.pos.z, v3.pos.z, t), distance, isfront);
+                temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
+                temp2.pos.z = Util.Util.lerp(v1.pos.z, v3.pos.z, t);
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
                 Vertex temp3 = new Vertex();
                 Vertex temp4 = new Vertex();
                 Vertex.Clone(v1, temp3);
                 Vertex.Clone(temp1, temp4);
-                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
-                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2));
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1, startIndex + 1));
+                clipQueue.Enqueue(new OneTriangle(temp4, temp3, v2, startIndex + 1));
                 return true;
             }
 
@@ -1576,57 +1538,57 @@ namespace graphic_exercise
             {
                 Vertex temp1 = new Vertex();
                 t = pv1 / dv1v2;
-                temp1.pos.x = eliminateErrors(Util.Util.lerp(v1.pos.x, v2.pos.x, t), distance);
-                temp1.pos.y = eliminateErrors(Util.Util.lerp(v1.pos.y, v2.pos.y, t),distance);
-                temp1.pos.z = eliminateErrors2(Util.Util.lerp(v1.pos.z, v2.pos.z, t), distance, isfront);
+                temp1.pos.x = Util.Util.lerp(v1.pos.x, v2.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v1.pos.y, v2.pos.y, t);
+                temp1.pos.z = Util.Util.lerp(v1.pos.z, v2.pos.z, t);
                 Util.Util.lerp(temp1, v1, v2, t);
 
                 Vertex temp2 = new Vertex();
                 t = pv1 / dv1v3;
-                temp2.pos.x = eliminateErrors(Util.Util.lerp(v1.pos.x, v3.pos.x, t), distance);
-                temp2.pos.y = eliminateErrors(Util.Util.lerp(v1.pos.y, v3.pos.y, t),distance);
-                temp2.pos.z = eliminateErrors2(Util.Util.lerp(v1.pos.z, v3.pos.z, t), distance, isfront);
+                temp2.pos.x = Util.Util.lerp(v1.pos.x, v3.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v1.pos.y, v3.pos.y, t);
+                temp2.pos.z = Util.Util.lerp(v1.pos.z, v3.pos.z, t);
                 Util.Util.lerp(temp2, v1, v3, t);
                 //画线或光栅化
-                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1));
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v1, startIndex + 1));
                 return true;
             }
             else if (projectV1 < distance && projectV2 > distance && projectV3 < distance)//只有v2在内
             {
                 Vertex temp1 = new Vertex();
                 t = pv2 / dv2v3;
-                temp1.pos.x = eliminateErrors(Util.Util.lerp(v2.pos.x, v3.pos.x, t),distance);
-                temp1.pos.y = eliminateErrors(Util.Util.lerp(v2.pos.y, v3.pos.y, t),distance);
-                temp1.pos.z = eliminateErrors2(Util.Util.lerp(v2.pos.z, v3.pos.z, t), distance, isfront) ;
+                temp1.pos.x = Util.Util.lerp(v2.pos.x, v3.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v2.pos.y, v3.pos.y, t);
+                temp1.pos.z = Util.Util.lerp(v2.pos.z, v3.pos.z, t) ;
                 Util.Util.lerp(temp1, v2, v3, t);
 
                 Vertex temp2 = new Vertex();
                 t = pv2 / dv1v2;
-                temp2.pos.x = eliminateErrors(Util.Util.lerp(v2.pos.x, v1.pos.x, t),distance);
-                temp2.pos.y = eliminateErrors(Util.Util.lerp(v2.pos.y, v1.pos.y, t),distance);
-                temp2.pos.z = eliminateErrors2(Util.Util.lerp(v2.pos.z, v1.pos.z, t), distance, isfront);
+                temp2.pos.x = Util.Util.lerp(v2.pos.x, v1.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v2.pos.y, v1.pos.y, t);
+                temp2.pos.z = Util.Util.lerp(v2.pos.z, v1.pos.z, t);
                 Util.Util.lerp(temp2, v2, v1, t);
                 //画线或光栅化
-                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2));
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v2, startIndex + 1));
                 return true;
             }
             else if (projectV1 < distance && projectV2 < distance && projectV3 > distance)//只有v3在内
             {
                 Vertex temp1 = new Vertex();
                 t = pv3 / dv1v3;
-                temp1.pos.x = eliminateErrors(Util.Util.lerp(v3.pos.x, v1.pos.x, t), distance);
-                temp1.pos.y = eliminateErrors(Util.Util.lerp(v3.pos.y, v1.pos.y, t),distance);
-                temp1.pos.z = eliminateErrors2(Util.Util.lerp(v3.pos.z, v1.pos.z, t), distance, isfront);
+                temp1.pos.x = Util.Util.lerp(v3.pos.x, v1.pos.x, t);
+                temp1.pos.y = Util.Util.lerp(v3.pos.y, v1.pos.y, t);
+                temp1.pos.z = Util.Util.lerp(v3.pos.z, v1.pos.z, t);
                 Util.Util.lerp(temp1, v3, v1, t);
 
                 Vertex temp2 = new Vertex();
                 t = pv3 / dv2v3;
-                temp2.pos.x = eliminateErrors(Util.Util.lerp(v3.pos.x, v2.pos.x, t), distance);
-                temp2.pos.y = eliminateErrors(Util.Util.lerp(v3.pos.y, v2.pos.y, t),distance);
-                temp2.pos.z = eliminateErrors2(Util.Util.lerp(v3.pos.z, v2.pos.z, t), distance, isfront);
+                temp2.pos.x = Util.Util.lerp(v3.pos.x, v2.pos.x, t);
+                temp2.pos.y = Util.Util.lerp(v3.pos.y, v2.pos.y, t);
+                temp2.pos.z = Util.Util.lerp(v3.pos.z, v2.pos.z, t);
                 Util.Util.lerp(temp2, v3, v2, t);
                 //画线或光栅化
-                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3));
+                clipQueue.Enqueue(new OneTriangle(temp1, temp2, v3, startIndex + 1));
                 return true;
             }
             return false;
@@ -1635,6 +1597,47 @@ namespace graphic_exercise
         #endregion
 
         #region 裁剪---一个面一个裁剪方法，比较麻烦
+
+        //float errorInterval = 0.01f;//误差区间
+        ///// <summary>
+        ///// 消除插值误差，xy方向
+        ///// </summary>
+        /////   /// <param name="n1">插值后顶点x/y值</param>
+        ///// <param name="n2">上/下/左/右平面位置</param>
+        ///// <returns>消除误差后顶点x/y值</returns>
+        //float eliminateErrors(float n1, float n2)
+        //{
+        //    if (Math.Abs(n1 + n2) < errorInterval)
+        //    {
+        //        n1 = -n2;
+        //    }
+        //    return n1;
+        //}
+        ///// <summary>
+        ///// 消除误差
+        ///// </summary>
+        ///// <param name="n1">插值后顶点z值</param>
+        ///// <param name="n2">远/近平面位置</param>
+        ///// <param name="isfront">是否时近剪裁平面剪裁</param>
+        ///// <returns>消除误差后顶点z值</returns>
+        //float eliminateErrors2(float n1, float n2, bool isfront)
+        //{
+        //    if (isfront)//近平面
+        //    {
+        //        if (Math.Abs(n1 - n2) < errorInterval)
+        //        {
+        //            n1 = n2;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        if (Math.Abs(n1 + n2) < errorInterval)
+        //        {
+        //            n1 = -n2;
+        //        }
+        //    }
+        //    return n1;
+        //}
 
         //private void clip(OneTriangle ot)
         //{
